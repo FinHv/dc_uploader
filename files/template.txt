@@ -1,7 +1,3 @@
-[c][b][size=16]!releasename![/size][/b][/c]
-
-[url=https://github.com/FinHv/dc_uploader]Created by DC Uploader v!version![/url]
-
 !imageupload!
 
 !gameimage!
@@ -10,4 +6,8 @@
 
 !screenshots!
 
+[c][b][size=16]!releasename![/size][/b][/c]
+
 !nfo!
+
+!mediainfo!

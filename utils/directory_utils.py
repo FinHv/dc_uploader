@@ -1,9 +1,6 @@
 import os
 from pathlib import Path
-
-from utils.bcolors import bcolors
 from utils.config_loader import ConfigLoader
-
 
 def create_process_directory(directory_name):
     """Create a process-specific directory using the process ID."""
@@ -18,7 +15,7 @@ def create_process_directory(directory_name):
 
     # Create the base tmp directory if it does not exist
     temp_dir_base.mkdir(parents=True, exist_ok=True)
-    #print(f"{bcolors.OKBLUE}Base temporary directory ensured at: {temp_dir_base}{bcolors.ENDC}")
+    #print(f"\033[94mBase temporary directory ensured at: {temp_dir_base}\033[0m")
     
     # Create the process-specific directory
     temp_dir = temp_dir_base / process_id
@@ -26,6 +23,6 @@ def create_process_directory(directory_name):
     # Create the final directory for the given directory name
     final_dir = temp_dir / directory_name
     final_dir.mkdir(parents=True, exist_ok=True)
-    print(f"{bcolors.OKGREEN}Working directory created at: {final_dir}{bcolors.ENDC}")
+    print(f"\033[92mWorking directory created at: {final_dir}\033[0m")
     return final_dir
 

@@ -1,11 +1,8 @@
 import os
-from pathlib import Path
-
 import requests
-
+from pathlib import Path
 from utils.config_loader import ConfigLoader
 from utils.logging_utils import log_to_file
-
 
 def upload_images(directory, is_screenshots=False):
     """

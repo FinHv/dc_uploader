@@ -46,27 +46,27 @@
                 'PASSWORD': 'Website Password',
                 'CAPTCHA_PASSKEY': 'Your passkey on the site',
                 'SITEURL': 'Site URL',
-                'LOGINTXT': 'Website Username',
+                'LOGINTXT': 'Login Text',
                 'APIKEY': 'TMDB API Key',
                 'UPLOADIMGURL': 'Image Host URL',
                 'AUTHCODE': 'Authorization Code',
-                'HASHER': 'Torrent Creator. (torf or mkbrr)',
-                'ECOMMENT': 'Comment to write to .torrent',
-                'ESOURCE': 'Source to write to .torrent',
-                'CREATOR': 'Creator to write to .torrent',
-                'SOURCEFOLDER': 'Original .torrent files path',
-                'ANNOUNCEURL': 'Your announce URL',
+                'ETORF': 'Torrent Creator (do not change)',
+                'ECOMMENT': 'Comment',
+                'ESOURCE': 'Source',
+                'CREATOR': 'Creator',
+                'ETORFPATH': 'Original torrent files path (dl with rss, irssi, autobrr)',
+                'ANNOUNCEURL': 'Announce URL',
                 'TEMPLATE_PATH': 'Template File Path',
                 'TMP_DIR': 'Temporary Directory',
-                'WATCHFOLDER': 'Your Watch Folder',
-                'DATADIR': 'Data Directory (DATADIR)',
+                'WATCHFOLDER': 'Watch Folder',
+                'DATADIR': 'Data Directory',
                 'FILTERS': 'Filters File',
                 'UPLOADLOG': 'Upload Log',
                 'COOKIEPATH': 'Cookie File',
                 'IMAGE_UPLOAD': 'Image Upload',
                 'DUPECHECK': 'Duplicate Check',
                 'DUPEDL': 'Download Duplicates',
-                'ADDFASTRESUME': 'Add Torrent with Fast Resume',
+                'ADDFASTRESUME': 'Add Fast Resume',
                 'PREPENDNAME': 'Prepend Name',
                 'EDIT_TORRENT': 'Edit Torrent',
                 'SCREENSHOTS': 'Generate Screenshots',
@@ -84,11 +84,11 @@
                 'MTNPOSTBY': 'MTN Post By',
                 'MTNSETTING': 'MTN Settings',
                 'MTNFONTFILE': 'MTN Font File',
-                'FREELEECH': 'Free leech',
-                'ANONYMOUS': 'Upload anonymously',
+                'frileech': 'Free leech',
+                'anonymousUpload': 'Upload anonymously',
             } %}
 
-            {% set boolean_fields = ['DUPECHECK', 'DUPEDL', 'ADDFASTRESUME', 'IMAGE_UPLOAD', 'MEDIAINFO', 'SCREENSHOTS', 'RAR2FS_SCREENSHOTS', 'IMDB', 'CLEANUP', 'ANONYMOUS', 'FREELEECH'] %}
+            {% set boolean_fields = ['DUPECHECK', 'DUPEDL', 'ADDFASTRESUME', 'IMAGE_UPLOAD', 'MEDIAINFO', 'SCREENSHOTS', 'RAR2FS_SCREENSHOTS', 'IMDB', 'CLEANUP', 'anonymousUpload', 'frileech'] %}
             {% set password_fields = ['password', 'CAPTCHA_PASSKEY', 'PASSWORD', 'USERNAME', 'ANNOUNCEURL', 'APIKEY', 'LOGINTXT' ] %}
 
             {% for section, settings in settings.items() %}
@@ -100,7 +100,7 @@
                                     <div class="form-group">
                                         <label for="{{ section }}_{{ key }}">{{ custom_labels.get(key, key) }}:</label>
 
-                                        {% if section == 'UploadForm' and key in ['FREELEECH', 'ANONYMOUS'] %}
+                                        {% if section == 'UploadForm' and key in ['frileech', 'anonymousUpload'] %}
                                             <select class="form-control" id="{{ section }}_{{ key }}" name="{{ section }}_{{ key }}">
                                                 <option value="1" {% if value in ['1', 1] %}selected{% endif %}>1 (Yes)</option>
                                                 <option value="0" {% if value in ['0', 0] %}selected{% endif %}>0 (No)</option>

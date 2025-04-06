@@ -1,245 +1,250 @@
 #!/bin/bash
 
-print_help() {
-    echo "Script usage: $script [OPTION]"
-    echo
-    echo "Optional arguments:"
-    echo "    -d, --domain: Fully qualified domain name (e.g. hostname.domain.tld) you wish to use for the web app."
-    echo
-    echo "    -h, --help: Show this help page"
-}
+set -e
 
+# Function to check if a command exists
 command_exists() {
     command -v "$1" &> /dev/null
 }
 
-set -e
+if [ "$EUID" -ne 0 ]
+    then echo "Please run as root or with sudo"
+    exit 1
+fi
 
-# Pretty colors
-red='\033[0;31m'
-ncl='\033[0m'
+# Move to install.sh root directory
+SCRIPT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
+
+cd "$SCRIPT_PATH"
+
+SERVER_NAME=$(hostname -f)
+
+# Prompt for user, password, and port
+read -p "Enter the port number for Flask to run on (default: 5000): " PORT
+read -p "Enter the username for the Flask login (default: admin): " USER
+read -p "Enter the password for the Flask login (default: p@ssw0rd) : " PASSWORD
+read -p "Enter the path for the python virtual environment. Do not include trailing '/' (default: /opt/dcc-uploader) : " VENV_PATH
+# Ask user if they want to use a domain or a self-signed certificate
+read -p "Do you want to use a domain with Let's Encrypt? (y/n): " USE_DOMAIN
+
+if [ "$USE_DOMAIN" == "y" ] || [ "$USE_DOMAIN" == "Y" ]; then
+    # User chooses to use a domain
+    echo "Info: If Let's Encrypt certificate for domain already exists, it will be imported instead of creating a new certificate"
+    read -p "Enter the fully qualified domain name for the server for Let's Encrypt : " SERVER_NAME
+    if [ -z "$SERVER_NAME" ] || [[ "$SERVER_NAME" == *" "* ]]; then
+        echo "You must provide a valid domain name with no spaces for Let's Encrypt."
+        exit 1
+    fi
+else
+    # User chooses to use a self-signed certificate
+    SERVER_NAME=$(hostname -f)
+    echo "Using self-signed certificate for server name: $SERVER_NAME"
+fi
 
 # Set default values if not provided
-HOSTNAME="$(hostname -f)"
+PORT=${PORT:-5000}
+USER=${USER:-admin}
+PASSWORD=${PASSWORD:-p@ssw0rd}
+VENV_PATH=${VENV_PATH:-/opt/dcc-uploader}
 
-script_path="$(readlink -f "${BASH_SOURCE[0]}")"
-root_dir="${script_path%/*}"
-script="${script_path##*/}"
-script_dir="$root_dir/scripts"
+# Update the config.ini file with user, password, and port
+echo "Updating config.ini..."
+sed -i "s/^user = .*/user = $USER/" config.ini
+sed -i "s/^password = .*/password = $PASSWORD/" config.ini
+sed -i "s/^port = .*/port = $PORT/" config.ini
+sed -i "s/^hostname = .*/hostname = $SERVER_NAME/" config.ini
 
-cd "$root_dir" || exit 1
+# Install software-properties-common without user interaction
+apt update
+apt-get install software-properties-common -y
 
-if [ $# -ne 0 ]; then
-    if [ $# -gt 1 ]; then
-        if [ "$1" != "-d" ] && [ "$1" != "--domain" ]; then
-            echo -e "${red}ERROR: Too many args. The only argument this script takes is -d/--domain. See --help.${ncl}" >&2
-            exit 1
-        fi
-    fi
+# Add the PPA repository without requiring confirmation
+add-apt-repository -y ppa:wahibre/mtn
 
-    valid_args=("-h" "--help" "-d" "--domain")
-    found=false
+# Update package lists
+apt update
 
-    for item in "${valid_args[@]}"; do
-        if [[ "$item" == "$1" ]]; then
-            found=true
-            break
-        fi
-    done
-    if ! $found; then
-        echo -e "${red}Error: Unrecognized argument: $1${ncl}" >&2
-        exit 1
-    fi
-
-    if ! opts=$(getopt -o 'hd:' -l 'help,domain:' -n "$script" -- "$@"); then
-        echo -e "${red}ERROR: Failed to parse options. See --help.${ncl}" >&2
-        exit 1
-    fi
-    # Reset the positional parameters to the parsed options
-    eval set -- "$opts"
-    # Process arguments
-    while true; do
-        case "$1" in
-            -d | --domain)
-                server_name="$2"
-                shift 2
-                ;;
-            -h | --help)
-                print_help
-                exit 0
-                ;;
-            --)
-                shift
-                # No domain provided, use a default
-                server_name=${server_name:-"$HOSTNAME"}
-                break
-                ;;
-            *)
-                echo -e "${red}Error: Unrecognized argument${ncl}" >&2
-                print_help
-                exit 1
-                ;;
-        esac
-    done
-fi
-
-if [ "$EUID" -ne 0 ]; then
-    echo -e "${red}Please run as root or with sudo.${ncl}" >&2
-    exit 1
-else
-    stored_user="$(who mom likes | awk '{print $1}')";
-    if [ -z  "$stored_user" ]; then
-        # For some reason, stored user still empty, try with sudo
-        stored_user="$(sudo who mom likes | awk '{print $1}')";
-        if [ -z  "$stored_user" ]; then
-            echo -e "${red}Couldn't store name of user running this script for some reason, contact the devs.${ncl}" >&2
-            exit 1
-        fi
-    fi
-fi
-
-. /etc/os-release
-
-if [ "$ID" != "ubuntu" ] && [ "$ID" != "debian" ]; then
-    echo -e "${red}ERROR: This program was only built for ubuntu/debian, aborting install.${ncl}" >&2
-    exit 1
-fi
-
-if [ -z "$server_name" ]; then
-    # Initiate server name to hostname in case user selects N. Needed for handle_reply.
-    read -p \
-    "Enter the fully qualified domain name for the self-signed certificate. Leave blank for default [default: $HOSTNAME] : " -r
-    server_name=${REPLY:-"$HOSTNAME"}
-fi
-
-# Domain name validation if an actual domain is being used
-if [ "$server_name" != "$HOSTNAME" ]; then
-    if ! echo "$server_name" | grep -qP '(?=^.{4,253}$)(^((?!-)[a-zA-Z0-9-]{1,63}(?<!-)\.)+[a-zA-Z]{2,63}$)'; then
-        echo -e "${red}Error: Invalid domain name provided${ncl}" >&2
-        exit 1
-    fi
-fi
-
-if ! command_exists mediainfo; then
-    # If mediainfo isn't already installed, add the repo
-    wget https://mediaarea.net/repo/deb/repo-mediaarea_1.0-25_all.deb
-    dpkg -i repo-mediaarea_1.0-25_all.deb
-    rm repo-mediaarea_1.0-25_all.deb
-fi
-# If mtn isn't already installed, add it.
-if ! command_exists mtn; then
-    if [ "$ID" == "ubuntu" ]; then
-        apt-get install -y software-properties-common
-        echo "Movie thumbnailer repo not detected in apt source, adding"
-        add-apt-repository -y ppa:wahibre/mtn
-    elif [ "$ID" == "debian" ]; then
-        if [ "$VERSION_ID" -ge 9 ]; then
-            if [ "$VERSION_ID" -eq 9 ]; then
-                VERSION_ID="9.0"
-            fi
-            apt-get install -y gpg
-            echo "deb http://download.opensuse.org/repositories/home:/movie_thumbnailer/Debian_$VERSION_ID/ /" | \
-                sudo tee /etc/apt/sources.list.d/home:movie_thumbnailer.list
-            curl -fsSL "https://download.opensuse.org/repositories/home:movie_thumbnailer/Debian_$VERSION_ID/Release.key" | \
-                gpg --dearmor | sudo tee /etc/apt/trusted.gpg.d/home_movie_thumbnailer.gpg > /dev/null
-        else
-            echo -e "${red}$ID $VERSION_ID is not supported. Aborting.${ncl}" >&2
-            exit 1
-        fi
-    fi
-fi
-
-apt-get update
-
-# Required packages
+# Install mtn, mediainfo, libfuse-dev, and unrar in one go
 echo "Installing required tools and their dependencies..."
-apt-get install -y build-essential mtn mediainfo fuse3 libfuse-dev screen autoconf python3 python3-venv
+apt-get install build-essential mtn mediainfo libfuse-dev unrar screen -y
 
 # Install rar2fs
 if [[ ! -f /usr/local/bin/rar2fs ]]; then
     echo "Installing rar2fs..."
-    unrar_ver="7.1.6"
-    rar2fs_ver="1.29.7"
-    workdir="/tmp/rar2fs_installation"
+    UNRARVER="6.0.7"
+    RAR2FSVER="1.29.3"
+    WORKDIR="/tmp/rar2fs_installation"
 
-    # Download rar2fs
-    mkdir -p $workdir
-    cd $workdir
-    wget https://github.com/hasse69/rar2fs/archive/refs/tags/v$rar2fs_ver.tar.gz
-    tar zxvf v$rar2fs_ver.tar.gz
-    cd rar2fs-$rar2fs_ver
+    mkdir -p $WORKDIR
+    cd $WORKDIR
 
-    # Download unrar inside rar2fs directory
-    wget https://www.rarlab.com/rar/unrarsrc-$unrar_ver.tar.gz
-    tar zxvf unrarsrc-$unrar_ver.tar.gz
+    wget http://www.rarlab.com/rar/unrarsrc-$UNRARVER.tar.gz
+    tar zxvf unrarsrc-$UNRARVER.tar.gz
     cd unrar
-
-    # Install unrar libraries, that's all rar2fs needs
-    echo "Compiling unrar..."
-    make --silent lib && echo "Unrar library compiled, installing..."
-    make install-lib && echo "Unrar library installed successfully"
-
-    # Back to rar2fs root directory
+    make && make install
+    make lib && make install-lib
     cd ..
 
-    # Install rar2fs
-    echo "Compiling rar2fs..."
-    autoreconf -f -i
-    ./configure && make --silent && echo "rar2fs compiled successfully, installing..."
-    make install && echo "rar2fs installed successfully"
+    wget https://github.com/hasse69/rar2fs/releases/download/v$RAR2FSVER/rar2fs-$RAR2FSVER.tar.gz
+    tar zxvf rar2fs-$RAR2FSVER.tar.gz
+    cd rar2fs-$RAR2FSVER
+    ./configure --with-unrar=../unrar --with-unrar-lib=/usr/lib/
+    make && make install
 
     sed -i 's/#user_allow_other/user_allow_other/g' /etc/fuse.conf
-    cd "$root_dir" || exit 1
-    rm -rf $workdir
+    cd ~
+    rm -rf $WORKDIR
+fi
+
+# Check if Python is installed, and install it if not
+if ! command_exists python3; then
+    echo "Python not found. Installing Python..."
+    apt-get install python3 -y
+fi
+
+if ! dpkg -l python3-venv | grep -q "venv module"; then
+    echo "Python venv package not found. Installing..."
+    apt-get install python3-venv -y
 fi
 
 # Create venv
-mkdir -p /venv
-python3 -m venv /venv/dc_uploader
+echo "Creating python virtaul environment..."
+if [ -d "$VENV_PATH" ]; then
+    if ! [ -f "$VENV_PATH/bin/python3" ]; then
+        # Existing directory is NOT a virtual environment, aborting
+        echo "Supplied virtual environment path conflicts with existing directory that is not a python virtual environment, please select a different path for the virtual enviornment"
+        exit 1
+    fi
+    read -p "Warning: virtual environment already exists, continue? [y/n] : " -r
+    echo # Move to new line for cleaner look
+    if ! [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "Aborting install"
+        exit 1
+    fi
+else
+    python3 -m venv $VENV_PATH
+    echo "Ensuring $VENV_PATH virtual environment pip is up to date"
+    "$VENV_PATH/bin/pip3" install --upgrade pip
+fi
 
 # Install Python packages
-echo "Installing Python packages in virtual environment..."
-"/venv/dc_uploader/bin/pip3" install --upgrade pip wheel
-"/venv/dc_uploader/bin/pip3" install --upgrade -r "$root_dir/requirements.txt"
+echo "Installing Python packages in $VENV_PATH virtual environment..."
+"$VENV_PATH/bin/pip3" install requests rfr
+"$VENV_PATH/bin/pip3" install flask
+"$VENV_PATH/bin/pip3" install watchdog
+"$VENV_PATH/bin/pip3" install torf-cli
+"$VENV_PATH/bin/pip3" install gevent
 
-# Ensure scripts are executable
-chmod +x "$script_dir/start.sh"
-chmod +x "$script_dir/shutdown.sh"
-chmod +x "$script_dir/upload.sh"
-chmod +x "$script_dir/queue_upload.sh"
-chmod +x "$root_dir/utils/config_validator.sh"
-
-echo "Initiating polar bear attack (do you guys actually read these messages?)"
+# Overwrite contents of start script with start command
+/usr/bin/printf "#!/bin/bash\nVENV_PATH=$VENV_PATH\n\nSCRIPT_PATH=\$( cd \"\$(dirname \"\${BASH_SOURCE[0]}\")\" ; pwd -P )\n\ncd \"\$SCRIPT_PATH\"\n\nscreen -dmS dcc-uploader \"\$VENV_PATH/bin/python3\" app.py" | tee start.sh > /dev/null
+# Ensure start and shutdown scripts are executable
+chmod +x start.sh
+chmod +x shutdown.sh
 
 # Call the Python script with the function name as an argument
 echo "Initializing databases..."
 # Does not need virtual environment since it is touching stuff outside of virtual environment
+python3 utils/database_utils.py initialize_all_databases
 
-if /venv/dc_uploader/bin/python3 "$root_dir/utils/database_utils.py" initialize_all_databases; then
+if [ $? -eq 0 ]; then
     echo "Databases created successfully."
 else
-    echo -e "${red}Error: Couldn't initialize databases${ncl}" >&2
+    echo "Error occurred while creating databases."
     exit 1
 fi
 
 # SSL setup
-# Generate a self-signed certificate
-echo "Generating self-signed certificate..."
-mkdir -p "$root_dir/certificates"
-openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout "$root_dir/certificates/key.pem" \
--out "$root_dir/certificates/cert.pem" -days 3650 -nodes -subj "/CN=$server_name"
+if [ "$USE_DOMAIN" == "y" ] || [ "$USE_DOMAIN" == "Y" ]; then
+    # Install Certbot and configure SSL with Let's Encrypt
+        echo "Uninstalling any certbot instances installed via apt"
+        read -p "Ready to uninstall any certbot instances installed from apt? [y/n] : " -r
+        echo
+        if ! [[ $REPLY =~ ^[Yy]$ ]]; then
+            echo "User did not want to uninstall existing certbot, aborting"
+            exit 1
+        fi
+        apt-get remove -y certbot
+        echo "Installing Certbot via pip..."
+        apt-get install -y libaugeas0
+        if ! [ -d "/opt/certbot" ]; then
+            echo "Certbot virtual environment does not exist, creating now..."
+            python3 -m venv /opt/certbot/
+        fi
+        /opt/certbot/bin/pip install --upgrade pip
+        /opt/certbot/bin/pip install certbot certbot-nginx
+        ln -sf /opt/certbot/bin/certbot /usr/bin/certbot
 
-chown -R "$stored_user":"$stored_user" certificates
+    echo "Configuring SSL with Let's Encrypt..."
+    SSL_CERT_PATH="/etc/letsencrypt/live/$SERVER_NAME/fullchain.pem"
+    SSL_KEY_PATH="/etc/letsencrypt/live/$SERVER_NAME/privkey.pem"
+    if [ -f $SSL_CERT_PATH ] && [ -f $SSL_KEY_PATH ]; then
+        echo "Certificates already exist, existing certificates will be imported"
+        echo "Calling certbot renew to ensure existing certificates are not expired"
+        certbot renew -q
+    else
+        read -p "Would you like to use Cloudflare DNS challenge instead of the default HTTP challenge? [y/n] : " -r
+        echo
+        if [[ $REPLY =~ ^[Yy]$ ]]; then
+            if [ -f "/root/.secrets/cloudflare.ini" ]; then
+                echo "Cloudflare credentials already exist, reusing existing credentials"
+            else
+                read -p "Cloudflare API token : " CF_TOKEN
+                if [ -z "$CF_TOKEN" ]; then
+                    echo "No Cloudflare token supplied, cannot continue"
+                    exit 1
+                fi
+                mkdir /root/.secrets/
+                touch /root/.secrets/cloudflare.ini
+                echo "dns_cloudflare_api_token = $CF_TOKEN" | tee /root/.secrets/cloudflare.ini
+                chmod 0700 /root/.secrets/
+                chmod 0600 /root/.secrets/cloudflare.ini
+                echo "Cloudflare credentials created"
+            fi
+            echo "Installing certbot cloudflare plugin..."
+            /opt/certbot/bin/pip install certbot-dns-cloudflare
+            echo "Calling certbot for credentials..."
+            certbot certonly --agree-tos --register-unsafely-without-email --key-type ecdsa --elliptic-curve secp384r1 --dns-cloudflare --dns-cloudflare-credentials /root/.secrets/cloudflare.ini -d "$SERVER_NAME"
+	    else
+	        echo "Calling certbot for credentials..."
+            certbot --nginx --agree-tos --register-unsafely-without-email --key-type ecdsa --elliptic-curve secp384r1 -d "$SERVER_NAME"
+        fi
+    fi
 
-echo "Self-signed SSL certificate generation complete."
+    # Update SSL paths in Flask app
+    sed -i "s|ssl_cert_path = .*|ssl_cert_path = '$SSL_CERT_PATH'|" app.py
+    sed -i "s|ssl_key_path = .*|ssl_key_path = '$SSL_KEY_PATH'|" app.py
+    read -p "SSL setup completed using Let's Encrypt, set up automatic renewal and monthly certbot updates? [y/n] : " -r
+    echo # Move to new line for cleaner look
+    if [[ $REPLY =~ ^[Yy]$ ]]; then
+        echo "Adding automatic renewal and monthly certbot updates to /etc/crontab if they don't already exist"
+        # Adds renewal to cron
+        if ! cat /etc/crontab | grep -q "certbot renew -q"; then
+            # At 12AM and 12PM every day. Will only renew certificates if eligible for automatic renewal
+            echo "0 0,12 * * * root /opt/certbot/bin/python -c 'import random; import time; time.sleep(random.random() * 3600)' && sudo certbot renew -q" | tee -a /etc/crontab > /dev/null
+        fi
+        if ! cat /etc/crontab | grep -q "/opt/certbot/bin/pip install --upgrade certbot"; then
+            # At 8am on the first day of the month
+	        echo "0 8 1 * * root /opt/certbot/bin/pip install --upgrade certbot" | tee -a /etc/crontab > /dev/null
+        fi
+    else
+        echo "Not setting up automatic renewal, please be mindful of certificate expiry, especially if this instance is exposed to the wide Internet"
+    fi
+else
+    # Generate a self-signed certificate
+    echo "Generating self-signed certificate..."
+    openssl req -x509 -newkey rsa:4096 -keyout key.pem -out cert.pem -days 365 -nodes -subj "/CN=$SERVER_NAME"
+
+    # Move self-signed certificates to an appropriate directory (e.g., /etc/ssl)
+    mv cert.pem /etc/ssl/certs/selfsigned_cert.pem
+    mv key.pem /etc/ssl/private/selfsigned_key.pem
+
+    # Update SSL paths in Flask app
+    SSL_CERT_PATH="/etc/ssl/certs/selfsigned_cert.pem"
+    SSL_KEY_PATH="/etc/ssl/private/selfsigned_key.pem"
+    sed -i "s|ssl_cert_path = .*|ssl_cert_path = '$SSL_CERT_PATH'|" app.py
+    sed -i "s|ssl_key_path = .*|ssl_key_path = '$SSL_KEY_PATH'|" app.py
+    echo "SSL setup complete using a self-signed certificate."
+fi
+
 echo "Your Flask app will now run with HTTPS!"
 
-# Update the config.ini file with user, password, and port
-echo "Updating config.ini hostname..."
-sed -i "s/^hostname = .*/hostname = $server_name/" "$root_dir/config.ini"
-
-echo "Setup complete. Start web server by executing start.sh, and make your first upload with upload.sh!"
-echo "Web app can be shutdown with shutdown.sh"
-echo -e "${red}If you are exposing the web app to the wider Internet, update config.ini to a more secure" \
-"username/password${ncl}"
-echo "Note: web app does not need to be running to upload, its usage is entirely optional"

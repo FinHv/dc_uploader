@@ -1,7 +1,6 @@
 import sqlite3
-import sys
 from datetime import datetime
-from pathlib import Path
+import sys
 
 UPLOADS_DB = 'data/uploads.db'
 TERMINAL_OUTPUT_DB = 'data/terminal_output.db'
@@ -62,12 +61,12 @@ def create_directories_table():
 
 def initialize_all_databases():
     """Initialize all required databases."""
-    # Ensure data directory for databases exists
-    Path("data").mkdir(parents=False, mode=0o775, exist_ok=True)
     create_uploads_table()
     create_terminal_output_table()
     create_directories_table()
     print("All databases initialized successfully.")
+
+
 
 def insert_upload(name, category=None, status=None, size=None, imdb_url=None, mediainfo=None, nfo_content=None, screenshot_url=None, image_url=None):
     """Insert a new upload record into the SQLite database with only the fields provided."""
@@ -94,8 +93,7 @@ def insert_upload(name, category=None, status=None, size=None, imdb_url=None, me
     conn.commit()
     conn.close()
 
-def update_upload_status(name, new_status=None, category=None, size=None, imdb_url=None, mediainfo=None, nfo=None,
-                         screenshot_url=None, image_url=None):
+def update_upload_status(name, new_status=None, category=None, size=None, imdb_url=None, mediainfo=None, nfo=None, screenshot_url=None, image_url=None):
     """Update the status and other details of an existing upload."""
     conn = sqlite3.connect(UPLOADS_DB)
     cursor = conn.cursor()

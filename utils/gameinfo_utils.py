@@ -1,12 +1,11 @@
 import os
-import re
-from datetime import datetime, timezone
-from pathlib import Path
-
 import requests
-
+import json
+import re
+from pathlib import Path
 from utils.config_loader import ConfigLoader
 from utils.logging_utils import log_to_file
+from datetime import datetime
 
 # Load configuration
 config = ConfigLoader().get_config()
@@ -56,6 +55,10 @@ def extract_game_name(release_name):
 
     return game_name
 
+
+
+from datetime import datetime
+
 def fetch_game_info(game_name, releasedir):
     """
     Fetch game information from IGDB API.
@@ -99,12 +102,7 @@ def fetch_game_info(game_name, releasedir):
 
             # Convert the release date from Unix time to a readable format
             release_date_unix = game.get('first_release_date', '')
-            release_date = (
-                datetime.fromtimestamp(release_date_unix, timezone.utc)
-                .strftime('%d %B %Y')
-                if release_date_unix
-                else 'Unknown'
-            )
+            release_date = datetime.utcfromtimestamp(release_date_unix).strftime('%d %B %Y') if release_date_unix else 'Unknown'
 
             # Function to replace the default image size in the URL with `t_720p` and add https if missing
             def fix_url(url):

@@ -1,7 +1,5 @@
 import json
 from pathlib import Path
-
-from utils.bcolors import bcolors
 from utils.config_loader import ConfigLoader
 
 # Load configuration
@@ -12,11 +10,11 @@ def load_filters():
     filters_path = Path(config.get('Paths', 'FILTERS'))
     
     if filters_path.exists():
-        #print(f"{bcolors.OKBLUE}Loading filters from: {filters_path}{bcolors.ENDC}")
+        #print(f"\033[94mLoading filters from: {filters_path}\033[0m")
         with open(filters_path, 'r') as f:
             return json.load(f)
     else:
-        print(f"{bcolors.FAIL}Filters file not found: {filters_path}{bcolors.ENDC}")
+        print(f"\033[91mFilters file not found: {filters_path}\033[0m")
         return {}
 
 def load_filters_with_path():
@@ -24,8 +22,8 @@ def load_filters_with_path():
     filters_path = Path(config.get('Paths', 'FILTERS'))
     
     if filters_path.exists():
-        #print(f"{bcolors.OKBLUE}Loading filters from: {filters_path}{bcolors.ENDC}")
+        #print(f"\033[94mLoading filters from: {filters_path}\033[0m")
         return filters_path
     else:
-        print(f"{bcolors.FAIL}Filters file not found: {filters_path}{bcolors.ENDC}")
+        print(f"\033[91mFilters file not found: {filters_path}\033[0m")
         return filters_path
