@@ -84,11 +84,11 @@
                 'MTNPOSTBY': 'MTN Post By',
                 'MTNSETTING': 'MTN Settings',
                 'MTNFONTFILE': 'MTN Font File',
-                'frileech': 'Free leech',
+                'freeleech': 'Free leech',
                 'anonymousUpload': 'Upload anonymously',
             } %}
 
-            {% set boolean_fields = ['DUPECHECK', 'DUPEDL', 'ADDFASTRESUME', 'IMAGE_UPLOAD', 'MEDIAINFO', 'SCREENSHOTS', 'RAR2FS_SCREENSHOTS', 'IMDB', 'CLEANUP', 'anonymousUpload', 'frileech'] %}
+            {% set boolean_fields = ['DUPECHECK', 'DUPEDL', 'ADDFASTRESUME', 'IMAGE_UPLOAD', 'MEDIAINFO', 'SCREENSHOTS', 'RAR2FS_SCREENSHOTS', 'IMDB', 'CLEANUP', 'anonymousUpload', 'freeleech'] %}
             {% set password_fields = ['password', 'CAPTCHA_PASSKEY', 'PASSWORD', 'USERNAME', 'ANNOUNCEURL', 'APIKEY', 'LOGINTXT' ] %}
 
             {% for section, settings in settings.items() %}
@@ -100,7 +100,7 @@
                                     <div class="form-group">
                                         <label for="{{ section }}_{{ key }}">{{ custom_labels.get(key, key) }}:</label>
 
-                                        {% if section == 'UploadForm' and key in ['frileech', 'anonymousUpload'] %}
+                                        {% if section == 'UploadForm' and key in ['freeleech', 'anonymousUpload'] %}
                                             <select class="form-control" id="{{ section }}_{{ key }}" name="{{ section }}_{{ key }}">
                                                 <option value="1" {% if value in ['1', 1] %}selected{% endif %}>1 (Yes)</option>
                                                 <option value="0" {% if value in ['0', 0] %}selected{% endif %}>0 (No)</option>
