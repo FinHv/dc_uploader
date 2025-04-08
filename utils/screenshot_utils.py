@@ -12,22 +12,21 @@ config = ConfigLoader().get_config()
 
 def generate_screenshots(directory, category_id):
     """Generate screenshots for movie files in the given directory using the MTN tool."""
-    MTNBIN = config.get('MediaTools', 'MTNBIN')
-    MTNWIDTH = config.get('MediaTools', 'MTNWIDTH')
-    MTNPOSTBY = config.get('MediaTools', 'MTNPOSTBY')
-    MTNSETTING = config.get('MediaTools', 'MTNSETTING')
-    MTNFONTFILE = config.get('MediaTools', 'MTNFONTFILE')
-    TMP_DIR = Path(config.get('Paths', 'TMP_DIR'))
+    mtn_width = config.get('MediaTools', 'MTNWIDTH')
+    mtn_postby = config.get('MediaTools', 'MTNPOSTBY')
+    mtn_setting = config.get('MediaTools', 'MTNSETTING')
+    mtn_fontfile = config.get('MediaTools', 'MTNFONTFILE')
+    tmp_dir = Path(config.get('Paths', 'TMP_DIR'))
 
     # Define paths for temporary files
-    tmp_dir = TMP_DIR / str(os.getpid())
+    tmp_dir = tmp_dir / str(os.getpid())
     screenshots_dir = tmp_dir / 'screens'
     screenshots_dir.mkdir(parents=True, exist_ok=True)
-    mounts_dir = TMP_DIR / 'mounts'
+    mounts_dir = tmp_dir / 'mounts'
     mounts_dir.mkdir(parents=True, exist_ok=True)
 
     # Prepare the command options
-    command_opts = f"{MTNWIDTH} {MTNPOSTBY} {MTNSETTING} -f {MTNFONTFILE}"
+    command_opts = f"{mtn_width} {mtn_postby} {mtn_setting} -f {mtn_fontfile}"
 
     # Check if screenshots are enabled and category is in the configured list
     screenshots_enabled = config.getboolean('Settings', 'SCREENSHOTS')
@@ -66,7 +65,7 @@ def generate_screenshots(directory, category_id):
 
 def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=False):
     """Process movie files to generate screenshots using MTN."""
-    movie_extensions = ['*.mp4', '*.mkv', '*.avi', '*.mov', '*.flv', '*.wmv', '*.mpg', '*.m2ts', '*.vob']
+    valid_movie_extension = ['*.mp4', '*.mkv', '*.avi', '*.mov', '*.flv', '*.wmv', '*.mpg', '*.m2ts', '*.vob']
     media_files = []
     root_files = []
     screenshots_generated = False
@@ -74,7 +73,7 @@ def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
     print(f"\033[33mCreating screenshots\n\033[0m")
     
     # Collect movie files in the root of the directory
-    for ext in movie_extensions:
+    for ext in valid_movie_extension:
         root_files.extend(Path(directory).glob(ext))
     
     # Determine if there are any movie files in the root directory
@@ -82,7 +81,7 @@ def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
     print(f"Root directory has movie files: {has_root_movie}")
 
     # Collect all movie files recursively
-    for ext in movie_extensions:
+    for ext in valid_movie_extension:
         media_files.extend(Path(directory).rglob(ext))
     
     if not media_files:
@@ -105,25 +104,19 @@ def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
         print(f"Processing file: {media_file}")
         try:
             # Run MTN to generate screenshots
-            command = [config.get('MediaTools', 'MTNBIN')] + command_opts.split() + [str(media_file), '-o', '.jpg', '-O', str(screenshots_dir)]
-            print(f"Running command: {' '.join(command)}")
-            result = subprocess.run(command, capture_output=True, text=True)
-            #print(f"Command output: {result.stdout}")
-            #print(f"Command error: {result.stderr}")
-            
-            # Check if any screenshot files are created
-            screenshot_files = list(screenshots_dir.glob(f"{media_file.stem}*.jpg"))
-            if screenshot_files:
-                print(f"Generated screenshots: {screenshot_files}")
-                screenshots_generated = True
-            else:
-                print(f"No screenshots generated for {media_file}.")
+            screenshots_generated = mtn_exec(command_opts, media_file, [config.get('MediaTools', 'MTNBIN')], screenshots_dir)
+            if not screenshots_generated:
+                print(f"Trying again with fallback mtn binary")
+                screenshots_generated = mtn_exec(command_opts, media_file, [config.get('MediaTools', 'MTNBIN_FALLBACK')], screenshots_dir)
+                if not screenshots_generated:
+                    # Still can't generate screenshots
+                    print(f"No screenshots generated for {media_file} with fallback mtn binary. Possibly broken media file")
         except subprocess.CalledProcessError as e:
             print(f"\033[91mError creating screenshots for {media_file}: {e}\033[0m")  # Red text for errors
         except Exception as e:
             print(f"\033[91mUnexpected error for {media_file}: {e}\033[0m")  # Red text for unexpected errors
 
-    # If no screenshots were generated and it's not a RAR2FS mount, check sample directories
+    # If no screenshots were generated, and it's not a RAR2FS mount, check sample directories
     if not screenshots_generated and not is_rar2fs:
         print(f"\033[33mNo screenshots generated from mounted files. Checking sample directories...\033[0m")
         # Process movie files in sample directories if no screenshots were generated
@@ -132,3 +125,19 @@ def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
             print(f"Found sample directories: {sample_dirs}")
         for sample_dir in sample_dirs:
             process_movie_files(sample_dir, command_opts, screenshots_dir, is_rar2fs=False)
+
+
+def mtn_exec(command_opts, media_file, mtn_path, screenshots_dir):
+    command = mtn_path + command_opts.split() + [str(media_file), '-o', '.jpg', '-O', str(screenshots_dir)]
+    print(f"Running command: {' '.join(command)}")
+    result = subprocess.run(command, capture_output=True, text=True)
+    # print(f"Command output: {result.stdout}")
+    # print(f"Command error: {result.stderr}")
+    # Check if any screenshot files are created
+    screenshot_files = list(screenshots_dir.glob(f"{media_file.stem}*.jpg"))
+    if screenshot_files:
+        print(f"Generated screenshots: {screenshot_files}")
+        return True
+    else:
+        print(f"No screenshots generated for {media_file}.")
+        return False
