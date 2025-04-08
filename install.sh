@@ -59,10 +59,10 @@ apt update
 apt-get install software-properties-common -y
 
 # Add the PPA repository without requiring confirmation
-add-apt-repository -y ppa:wahibre/mtn
+add-apt-repository -y ppa:wahibre/mtn && apt update
 
 # Update package lists
-apt update
+
 
 # Install mtn, mediainfo, libfuse-dev, and unrar in one go
 echo "Installing required tools and their dependencies..."
