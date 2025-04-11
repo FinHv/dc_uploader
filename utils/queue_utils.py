@@ -72,9 +72,9 @@ def process_exists(pid):
         return False
 
 def detect_running_processes():
-    """Detect running 'upload.py' processes and add them to the queue."""
+    """Detect running 'backend.py' processes and add them to the queue."""
     for proc in psutil.process_iter(['pid', 'name', 'cmdline']):
-        if 'python' in proc.info['name'] and 'upload.py' in proc.info['cmdline']:
+        if 'python' in proc.info['name'] and 'backend.py' in proc.info['cmdline']:
             pid = proc.info['pid']
             # Extract directory name from command-line arguments
             if len(proc.info['cmdline']) > 1:
@@ -107,7 +107,7 @@ def queue_manager():
     init_db()
     
     while True:
-        # Detect and add new running upload.py processes
+        # Detect and add new running backend.py processes
         detect_running_processes()
         
         # Check running tasks and mark them as completed if they are no longer running

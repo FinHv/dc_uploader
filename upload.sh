@@ -185,7 +185,7 @@ fi
 # Run using venv
 source "venv/bin/activate"
 
-if python3 upload.py "$uploaded_directory"; then
+if python3 backend.py "$uploaded_directory"; then
     exit 0;
 else
     exit 1;

@@ -1,23 +1,21 @@
-import platform
-
-from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
-from gevent import pywsgi
 import configparser
-import os
-import subprocess
-from functools import wraps
-from datetime import datetime
-import logging
-import threading
 import json
-import ssl
-from operator import itemgetter
+import logging
+import os
+import platform
+import shlex
 import sqlite3
-from watchdog.observers import Observer
-from watchdog.events import FileSystemEventHandler
+import subprocess
+import threading
 import time
 from collections import OrderedDict
+from datetime import datetime
+from functools import wraps
+from operator import itemgetter
 
+from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
+from watchdog.events import FileSystemEventHandler
+from watchdog.observers import Observer
 
 DATABASE = 'data/uploads.db'
 DIRDATABASE = 'data/directories.db'
@@ -414,9 +412,8 @@ def upload():
     if not directory_name:
         return "Directory name not provided", 400  # Return 400 if directory_name is missing
 
-    # Start upload in a separate thread to avoid blocking
-    upload_thread = threading.Thread(target=upload.py, args=(directory_name,))
-    upload_thread.start()
+    # Start upload in a subprocess to avoid blocking
+    subprocess.Popen(['venv/bin/python3', 'backend.py', f'{shlex.quote(str(directory_name))}'])
 
     return "Upload started", 200
 

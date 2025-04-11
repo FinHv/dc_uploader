@@ -1,30 +1,30 @@
-import platform
-import sys
 import os
+import platform
 import re
-import time
 import shutil
 import sqlite3
-from datetime import datetime
+import sys
+import time
 from pathlib import Path
-from utils.status_utils import create_status_folder, remove_status_folder, update_status
-from utils.config_loader import ConfigLoader
-from utils.torrent_utils import create_torrent, upload_torrent, download_duplicate_torrent
-from utils.directory_utils import create_process_directory
-from utils.logging_utils import log_to_file, log_upload_details
-from utils.dupe_utils import check_and_download_dupe
-from utils.login_utils import login
-from utils.category_utils import determine_category
-from utils.screenshot_utils import generate_screenshots
-from utils.template_utils import prepare_template
-from utils.mediainfo_utils import generate_mediainfo
-from utils.filters_utils import load_filters_with_path
-from utils.imdb_utils import get_imdb_info, extract_imdb_link_from_nfo, extract_movie_details, extract_tv_show_details, get_imdb_tv_info
-from utils.image_utils import upload_images
-from utils.nfo_utils import process_nfo
+
 from utils.art_utils import ascii_art_header
+from utils.category_utils import determine_category
+from utils.config_loader import ConfigLoader
 from utils.database_utils import insert_upload, update_upload_status
+from utils.dupe_utils import check_and_download_dupe
 from utils.gameinfo_utils import fetch_game_info, extract_game_name
+from utils.image_utils import upload_images
+from utils.imdb_utils import get_imdb_info, extract_imdb_link_from_nfo, extract_movie_details, extract_tv_show_details, \
+    get_imdb_tv_info
+from utils.logging_utils import log_to_file, log_upload_details
+from utils.login_utils import login
+from utils.mediainfo_utils import generate_mediainfo
+from utils.nfo_utils import process_nfo
+from utils.screenshot_utils import generate_screenshots
+from utils.status_utils import update_status
+from utils.template_utils import prepare_template
+from utils.torrent_utils import create_torrent, upload_torrent
+
 
 class CustomOutput:
     def __init__(self, original_stdout, db_path="data/terminal_output.db"):
