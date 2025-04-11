@@ -106,7 +106,7 @@ def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
             screenshots_generated = mtn_exec(command_opts, media_file, [config.get('MediaTools', 'MTNBIN')], screenshots_dir)
             if not screenshots_generated:
                 print(f"Trying again with fallback mtn binary")
-                screenshots_generated = mtn_exec(command_opts, media_file, [config.get('MediaTools', 'MTNBIN_FALLBACK')], screenshots_dir)
+                screenshots_generated = mtn_exec(command_opts, media_file, 'bin/mtn/mtn-fallback', screenshots_dir)
                 if not screenshots_generated:
                     # Still can't generate screenshots
                     print(f"No screenshots generated for {media_file} with fallback mtn binary. Possibly broken media file")
