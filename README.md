@@ -91,7 +91,7 @@ The DATADIR would be /home/torrentdata
 
 You would run: `upload.sh "/home/torrentdata/tracker1/this.is.a.nice.movie-grp"`
 
-By default, the program assumes that the data to be uploaded already exists in DATADIR. See [discrete directories](https://github.com/FinHv/dc_uploader/tree/main?tab=readme-ov-file#discrete-directories) if you want to upload directories that are outside DATADIR.
+By default, the program assumes that the data to be uploaded already exists in DATADIR. See [discrete directories](https://github.com/FinHv/dc_uploader/tree/main?tab=readme-ov-file#discrete-directories) if you want to upload directories that are outside DATADIR. If you pass `upload.sh` one of the optional arguments, but the directory is already in DATADIR, it just ignores the argument, thus avoiding duplicating data.
 
 #### Optional arguments:
 -h, --help: Prints help. Called via `upload.sh -h` or `upload.sh --help`.
@@ -108,7 +108,7 @@ Following arguments are primarily used when user is using discrete directories.
 
 If you have many directories you want to upload at once, but don't want to manually run `upload.sh` so many times, use `queue_upload.sh`. Create a file and write the same directory path you'd normally use for `upload.sh`, with each directory on a separate line. Then, just call `queue_upload.sh [QUEUE FILE] [OPTION]`. 
 
-Use `queue_upload.sh` exactly the same as you would `upload.sh`, just that instead of providing a directory, you provide a queue file. The only difference is that link/copy/move argument is mandatory, not optional. Don't worry, if the directory already exists in DATADIR, the argument is ignore for that directory, as `upload.sh` is what is called under the hood and already has such checks.
+Use `queue_upload.sh` exactly the same as you would `upload.sh`, just that instead of providing a directory, you provide a queue file. The only difference is that link/copy/move argument is mandatory, not optional. Don't worry, again, if the directory already exists in DATADIR, the argument is ignored for that directory, as `upload.sh` is what is called under the hood and already has such checks.
 
 The queue file provided to `queue_upload.sh` can either be a full absolute path or a relative path relative to `queue_upload.sh`. e.g. `queue_upload.sh some_queue_file.txt [OPTION]` if queue file is located in the same folder as `queue_upload.sh`.
 
@@ -199,7 +199,7 @@ A: This depends on how you set up the watch directory. By using a watch director
 
 #### Q: I use discrete directories, but I want to add it to a download-then-uploadToDCC automation pathway, how do I do that?
 
-A: Assuming you have created an upload directory as directed by the [discrete directories](https://github.com/FinHv/dc_uploader/tree/main?tab=readme-ov-file#discrete-directories) section, just pass the torrent content path to upload.sh with one of the relevant arguments. The script is the one that handles the linking/copying/moving.
+A: Assuming you have created an upload directory as directed by the [discrete directories](https://github.com/FinHv/dc_uploader/tree/main?tab=readme-ov-file#discrete-directories) section, just pass the torrent content path to upload.sh with one of the relevant arguments. The script is the one that handles the linking/copying. You most likely should not use `--mv` in automation since it can break the source torrent which you might still need to seed.
 
 **Example with rtorrent:**
 
@@ -210,18 +210,17 @@ schedule2 = tied_directory,6,5,start_tied=
 schedule2 = untied_directory,7,5,stop_untied=
 schedule2 = untied_directory,8,5,remove_untied=
 
-method.set_key = event.download.finished,upload_torrent,"execute=bash,/your/path/to/dc_uploader/upload.sh,$d.name="
+method.set_key=event.download.finished,move_complete, \
+"execute2={/path/to/dc_upload/upload.sh,$d.get_base_path=,--ln/--cp}"
 ```
 
-Here, sourcewatch is SOURCEFOLDER, dcwatch is WATCHFOLDER, DATADIR would be whatever folder rtorrent downloads torrents into, and $d.name= is the directory to be uploaded. This example does not use discrete folders, modify as needed for discrete folders.
+Here, sourcewatch is SOURCEFOLDER, dcwatch is WATCHFOLDER, DATADIR would be whatever folder rtorrent downloads torrents into, and $d.get_base_path= is the directory to be uploaded.
 
 **Example with qBittorrent:**
 
 Navigate to "Downloads" in settings. Scroll to bottom, check "Run external program on torrent finished". Input:
 
 `/path/to/dc_uploader/upload.sh %F [ARG as needed]`
-
-`--mv` shouldn't be used since the torrent you just downloaded needs the data to stay in place.
 
 If you already have some command executing, just chain the command:
 

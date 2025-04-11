@@ -167,13 +167,13 @@ if ! [ -d "$DATA_DIR/$UPLOADED_DIRECTORY" ]; then
     echo "$UPLOADED_DIRECTORY not already in $DATA_DIR, creating it with specified option"
     if $LN; then
         # Hardlink, fallback to symlink otherwise
-        if ! cp -rvpl --strip-trailing-slashes -t "$DATA_DIR" "$DATA_PATH"; then
+        if ! cp -alv --strip-trailing-slashes -t "$DATA_DIR" "$DATA_PATH"; then
             echo -e "${YLW}Could not hardlink, falling back to symlink${NCL}"
             ln -sv -t "$DATA_DIR" "$DATA_PATH" || exit 1
         fi
     elif $CP; then
         # Copy
-        cp -rvp --strip-trailing-slashes -t "$DATA_DIR" "$DATA_PATH" || exit 1
+        cp -av --strip-trailing-slashes -t "$DATA_DIR" "$DATA_PATH" || exit 1
     elif $MV; then
         mv -v --strip-trailing-slashes -t "$DATA_DIR" "$DATA_PATH" || exit 1
     else
