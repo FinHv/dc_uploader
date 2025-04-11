@@ -91,7 +91,7 @@ while IFS= read -r line; do
 
     # Run the check
     check "$key" "$value"
-done < "$root_dir/my_config.ini"
+done < "$root_dir/config.ini"
 
 if $fatal_error; then
     exit 1
