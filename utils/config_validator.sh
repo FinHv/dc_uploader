@@ -6,6 +6,9 @@ check() {
                     echo -e "${YLW}Warning${NCL}: TMDB API key not set, will not be able to get IMDB information"
                 elif [ "$1" == "CLIENT_ID" ] || [ "$1" == "CLIENT_SECRET" ]; then
                     echo -e "${YLW}Warning${NCL}: IGDB $1 not set, will not be able to get video game information"
+                elif [[ $2 == *"/" ]] || [[ $2 == *"/ " ]]; then
+                    echo -e "${YLW}Warning${NCL}: $1 should not have a trailing forward slash ( '/' ), might introduce" \
+                    "bugs."
                 else
                     echo -e "${RED}Fatal${NCL}: $1 must not be empty"
                     FATAL_ERROR=true

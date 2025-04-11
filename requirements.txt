@@ -5,3 +5,4 @@ watchdog
 torf-cli
 gevent
 cli-ui
+rich

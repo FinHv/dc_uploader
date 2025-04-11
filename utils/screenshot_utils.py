@@ -130,8 +130,13 @@ def mtn_exec(command_opts, media_file, mtn_path, screenshots_dir):
     command = mtn_path + command_opts.split() + [str(media_file), '-o', '.jpg', '-O', str(screenshots_dir)]
     print(f"Running command: {' '.join(command)}")
     result = subprocess.run(command, capture_output=True, text=True)
+    # Debug
     # print(f"Command output: {result.stdout}")
     # print(f"Command error: {result.stderr}")
+    if result != 0:
+        print(f"Failed to generate screenshots for {media_file}.")
+        return False
+
     # Check if any screenshot files are created
     screenshot_files = list(screenshots_dir.glob(f"{media_file.stem}*.jpg"))
     if screenshot_files:
