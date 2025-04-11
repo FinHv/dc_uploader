@@ -19,9 +19,9 @@ A simple python tool built for ubuntu to create and upload torrents. Debian is u
 
 ## Install
 
-1. Download the project as a zip.
+1. Download the release tarball.
 
-2. Unzip to desired directory.
+2. Untar to current directory with `tar -xvzf dc_uploader-[RELEASE_VERSION].tar.gz`.
 
 3. cd into the unzipped directory (not strictly necessary, but allows you to call install with just `./install.sh`)
 
