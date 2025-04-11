@@ -77,7 +77,7 @@ def create_torrent(directory, temp_dir):
     temp_dir_path = Path(temp_dir)
     output_torrent = f"{shlex.quote(str(temp_dir_path / f"{directory_path.name}.torrent"))}"
 
-    # Proceed only if SOURCEFOLDER is not empty
+    # Proceed only if SOURCEFOLDER is set
     if etorrentpath:
         etorrent_file_path = Path(etorrentpath) / f"{directory_path.name}.torrent"
     else:
