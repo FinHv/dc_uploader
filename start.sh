@@ -1,14 +1,11 @@
 #!/bin/bash
-if [ "$EUID" -ne 0 ]; then
-    echo "Please run as root or with sudo" >&2
-    exit 1
-fi
 
-SCRIPT_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
+script_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
 
-cd "$SCRIPT_PATH" || exit
+cd "$script_path" || exit
 
-if utils/config_validator.sh; then
+if utils/config_validator.sh "start.sh"; then
     # Only start if config validator returns on fatal errors
+    echo "Starting web app with detached screen named \"dc-uploader\""
     screen -dmS dc-uploader "venv/bin/python3" app.py
 fi

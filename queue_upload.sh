@@ -1,9 +1,9 @@
 #!/bin/bash
 
 print_help() {
-    echo "Script usage: $SCRIPT_NAME [QUEUE FILE] [OPTION]"
-    echo "Queue file can either be a full absolute path or a relative path relative to $SCRIPT_NAME. e.g." \
-    "$SCRIPT_NAME some_queue_file.txt [OPTION] if queue file is located in the same folder as $SCRIPT_NAME"
+    echo "Script usage: $script_name [QUEUE FILE] [OPTION]"
+    echo "Queue file can either be a full absolute path or a relative path relative to $script_name. e.g." \
+    "$script_name some_queue_file.txt [OPTION] if queue file is located in the same folder as $script_name"
     echo
     echo "Required argument. Pick one:"
     echo "    -l, --ln: Hardlinks provided directory to DATADIR. If hardlink fails, fallback to symlink."
@@ -16,9 +16,9 @@ print_help() {
     echo "    -h, --help: Show this help page."
 }
 
-SCRIPT_DATA_PATH=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
+script_data_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
 
-cd "$SCRIPT_DATA_PATH" || exit
+cd "$script_data_path" || exit
 
 # # Only continue if config validator returns on fatal errors
 if ! utils/config_validator.sh; then
@@ -26,57 +26,56 @@ if ! utils/config_validator.sh; then
 fi
 
 # Pretty colors
-RED='\033[0;31m'
-YLW='\033[1;33m'
-NCL='\033[0m'
+red='\033[0;31m'
+ncl='\033[0m'
 
-DATA_DIR="$(awk -F '=' '/^DATADIR[[:space:]]*=/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}' config.ini)"
+data_dir="$(awk -F '=' '/^DATADIR[[:space:]]*=/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}' config.ini)"
 # In case user put in a trailing forward slash to DATADIR
-DATA_DIR=$(realpath -s "$DATA_DIR")
-QUEUE_FILE="$1"
-FULL_SCRIPT_NAME="$(readlink -f "${BASH_SOURCE[0]}")"
-SCRIPT_NAME="${FULL_SCRIPT_NAME##*/}"
+data_dir=$(realpath -s "$data_dir")
+queue_file="$1"
+full_script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+script_name="${full_script_path##*/}"
 
 # Initial argument check
-if [ $# -eq 0 ] || [[ "$QUEUE_FILE" == "--help" ]] || [[ "$QUEUE_FILE" == "-h" ]]; then
+if [ $# -eq 0 ] || [[ "$queue_file" == "--help" ]] || [[ "$queue_file" == "-h" ]]; then
     # No arguments provided or first argument was help, just print help
     print_help
     exit 0
 fi
 
 if [ $# -lt 2 ]; then
-    echo -e "${RED}ERROR: Not enough arguments provided${NCL}" >&2
+    echo -e "${red}ERROR: Not enough arguments provided${ncl}" >&2
     exit 1
 fi
 
 if [ $# -gt 2 ]; then
-    echo -e "${RED}ERROR: Too many args.${NCL}" >&2
+    echo -e "${red}ERROR: Too many args.${ncl}" >&2
     exit 1
 fi
 
-VALID_ARGS=("-h" "--help" "-l" "--ln" "-c" "--cp" "-m" "--mv")
-FOUND=false
+valid_args=("-h" "--help" "-l" "--ln" "-c" "--cp" "-m" "--mv")
+found=false
 
-for item in "${VALID_ARGS[@]}"; do
+for item in "${valid_args[@]}"; do
     if [[ "$item" == "$2" ]]; then
-        FOUND=true
+        found=true
         break
     fi
 done
-if ! $FOUND; then
-    echo -e "${RED}Error: Unrecognized argument: $2${NCL}" >&2
+if ! $found; then
+    echo -e "${red}Error: Unrecognized argument: $2${ncl}" >&2
     exit 1
 fi
 
 # Store arg so it's not lost after getopt
 ARG="$2"
 
-if ! OPTS=$(getopt -o 'hlcm' -l 'help,ln,cp,mv' -n "$SCRIPT_NAME" -- "$@"); then
-    echo -e "${RED}ERROR: Failed to parse options. See --help.${NCL}" >&2
+if ! opts=$(getopt -o 'hlcm' -l 'help,ln,cp,mv' -n "$script_name" -- "$@"); then
+    echo -e "${red}ERROR: Failed to parse options. See --help.${ncl}" >&2
     exit 1
 fi
 # Reset the positional parameters to the parsed options
-eval set -- "$OPTS"
+eval set -- "$opts"
 
 # Process arguments
 while true; do
@@ -99,30 +98,30 @@ while true; do
             break
             ;;
         *)
-            echo -e "${RED}ERROR: Unrecognized argument${NCL}" >&2
+            echo -e "${red}ERROR: Unrecognized argument${ncl}" >&2
             exit 1
             ;;
     esac
 done
 
-eval set -- "$OPTS"
-QUEUE_FILE=$(realpath -s "$QUEUE_FILE")
-if ! [ -f "$QUEUE_FILE" ]; then
+eval set -- "$opts"
+queue_file=$(realpath -s "$queue_file")
+if ! [ -f "$queue_file" ]; then
     # It's a file. Error.
-    echo -e "${RED}ERROR: $QUEUE_FILE does not exist${NCL}" >&2
+    echo -e "${red}ERROR: $queue_file does not exist${ncl}" >&2
     exit 1
 fi
 
 # Remove old log file
-LOG_PATH="files/queue_upload.log"
-if [ -f "$LOG_PATH" ]; then
-    rm "$LOG_PATH"
+log_path="files/queue_upload.log"
+if [ -f "$log_path" ]; then
+    rm "$log_path"
 fi
 
-while IFS= read -r LINE; do
-    if ./upload.sh "$LINE" "$ARG"; then
-        echo "Successfully uploaded: $(basename "$LINE")" >> "$LOG_PATH"
+while IFS= read -r line; do
+    if ./upload.sh "$line" "$ARG"; then
+        echo "Successfully uploaded: $(basename "$line")" >> "$log_path"
     else
-        echo "Error when uploading: $(basename "$LINE")" >> "$LOG_PATH"
+        echo "Error when uploading: $(basename "$line")" >> "$log_path"
     fi
-done < "$QUEUE_FILE"
+done < "$queue_file"

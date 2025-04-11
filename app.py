@@ -734,8 +734,8 @@ if __name__ == '__main__':
     initiate_cleanup_daemon()
 
     # Path to your SSL certificate and key
-    ssl_cert_path = '/etc/ssl/certs/selfsigned_cert.pem'
-    ssl_key_path = '/etc/ssl/private/selfsigned_key.pem'
+    ssl_cert_path = 'certificates/cert.pem'
+    ssl_key_path = 'certificates/key.pem'
 
     try:
         # Run Flask app with SSL support
