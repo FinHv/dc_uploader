@@ -55,6 +55,8 @@ Do not change the headers or location of the settings. If it is not mentioned be
 - PASSWORD: Your site password.
 - CAPTCHA_PASSKEY: This is your passkey for the site.
 - LOGINTXT: Your site username (again).
+- FREELEECH: Set uploaded torrent to freeleech. Vast majority of users have no actual control over the freeleech status of their uploads, so the majority of users can just leave this at default and ignore it.
+- ANONYMOUS: Set uploaded torrents to anonymous or not. Defaults to 1 (true).
 - APIKEY: Your TMDB API key to search for meta info.
 - CLIENT_ID: Your IGDB client ID to search for video game info.
 - CLIENT_SECRET: Your IGDB client secret to search for video game info
@@ -70,6 +72,8 @@ TMDB:
 
 IGDB:
 - See [here](https://api-docs.igdb.com/#getting-started) on how to generate a client ID and secret.
+
+Setting Freeleech
 
 ## Usage
 
