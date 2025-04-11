@@ -1,13 +1,16 @@
 import os
 import shlex
-import subprocess
+
 import requests
 from pathlib import Path
 from utils.logging_utils import log_to_file
 from utils.config_loader import ConfigLoader
 from utils.fastresume_utils import add_fastresume
+from torf import Torrent
+import time
 import configparser
 import shutil
+import cli_ui
 
 # Load configuration
 config = ConfigLoader().get_config()
@@ -18,17 +21,50 @@ PREPENDNAME = config.get('Settings', 'PREPENDNAME')
 
 # Ensure TMP_DIR exists
 os.makedirs(TMP_DIR, exist_ok=True)
+torf_start_time = time.time()
+
+def torf_cb(torrent, filepath, pieces_done, pieces_total):
+    global torf_start_time
+
+    if pieces_done == 0:
+        torf_start_time = time.time()  # Reset start time when hashing starts
+
+    elapsed_time = time.time() - torf_start_time
+
+    # Calculate percentage done
+    if pieces_total > 0:
+        percentage_done = (pieces_done / pieces_total) * 100
+    else:
+        percentage_done = 0
+
+    # Estimate ETA (if at least one piece is done)
+    if pieces_done > 0:
+        estimated_total_time = elapsed_time / (pieces_done / pieces_total)
+        eta_seconds = max(0, estimated_total_time - elapsed_time)
+        eta = time.strftime("%M:%S", time.gmtime(eta_seconds))
+    else:
+        eta = "--:--"
+
+    # Calculate hashing speed (MB/s)
+    if elapsed_time > 0 and pieces_done > 0:
+        piece_size = torrent.piece_size / (1024 * 1024)
+        speed = (pieces_done * piece_size) / elapsed_time
+        speed_str = f"{speed:.2f} MB/s"
+    else:
+        speed_str = "-- MB/s"
+
+    # Display progress with percentage, speed, and ETA
+    cli_ui.info_progress(f"Hashing... {speed_str} | ETA: {eta}", int(percentage_done), 100)
 
 def create_torrent(directory, temp_dir):
     """Create a torrent file from the given directory using torf-cli."""
     try:
         edit_torrent = config.getboolean('Torrent', 'EDIT_TORRENT')
-        etorf = config.get('Torrent', 'ETORF')
         ecomment = config.get('Torrent', 'ECOMMENT')
         esource = config.get('Torrent', 'ESOURCE')
         creator = config.get('Torrent', 'CREATOR')
         announceurl = config.get('Torrent', 'ANNOUNCEURL')
-        etorrentpath = config.get('Torrent', 'ETORFPATH')
+        etorrentpath = config.get('Torrent', 'SOURCEPATH')
     except (configparser.NoOptionError, configparser.NoSectionError) as e:
         print(f"Config error: {e}")
         return None
@@ -36,59 +72,100 @@ def create_torrent(directory, temp_dir):
     directory_path = Path(directory)
     temp_dir_path = Path(temp_dir)
     torrent_file = temp_dir_path / f"{directory_path.name}.torrent"
-    etorrent_file_path = Path(etorrentpath) / f"{directory_path.name}.torrent"
 
-    if etorrentpath:  # Proceed only if ETORFPATH is not empty
+    # Proceed only if SOURCEPATH is not empty
+    if etorrentpath:
         etorrent_file_path = Path(etorrentpath) / f"{directory_path.name}.torrent"
     else:
-        print("ETORFPATH is not configured; skipping edit and will create a new torrent.")
+        print("SOURCEPATH is not configured; not reusing existing torrent. New torrent will be generated.")
         etorrent_file_path = None
 
     piece_size = calculate_piece_size(directory)
-
     if edit_torrent and etorrent_file_path and etorrent_file_path.exists():
-        torf_cmd = (
-            f"{shlex.quote(etorf)} "
-            f"-i {shlex.quote(str(torrent_file))} "
-            f"--notracker --nomagnet "
-            f"--comment {shlex.quote(ecomment)} "
-            f"--yes --source {shlex.quote(esource)} "
-            f"--creator {shlex.quote(creator)} "
-            f"--tracker {shlex.quote(announceurl)} "
-            f"--out {shlex.quote(str(torrent_file))}"
-        )
-        print(f"### Found existing torrent. {torrent_file}")
-    else:
-        torf_cmd = (
-            f"{shlex.quote(etorf)} "
-            f"{shlex.quote(str(directory_path))} "
-            f"--max-piece-size {piece_size} "
-            f"--nomagnet --xseed "
-            f"--comment {shlex.quote(ecomment)} "
-            f"--yes --source {shlex.quote(esource)} "
-            f"--creator {shlex.quote(creator)} "
-            f"--tracker {shlex.quote(announceurl)} "
-            f"--out {shlex.quote(str(torrent_file))}"
-        )
-        print(f"\033[36mCreate torrent file.. {torrent_file}\n\033[0m")
+        # Existing torrent successfully found, and torrent reuse is desired
+        try:
+            reused_torrent = Torrent.read(f"{shlex.quote(str(etorrent_file_path))}")
+        except Exception as e:
+            log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+            print(f"Error reusing torrent: {e}")
+            return None, None
+        else:
+            print(f"### Found existing torrent. {torrent_file}")
+            # Now edit the torrent as an object
+            reused_torrent.trackers = [announceurl]
+            reused_torrent.comment = ecomment
+            reused_torrent.created_by = creator
 
-    log_to_file(temp_dir_path / 'create_torrent_cmd.txt', torf_cmd)
-    
+            info_dict = reused_torrent.metainfo['info']
+            valid_keys = ['name', 'piece length', 'pieces', 'private', 'source']
+
+            # Add the correct key based on single vs multi file torrent
+            if 'files' in info_dict:
+                valid_keys.append('files')
+            elif 'length' in info_dict:
+                valid_keys.append('length')
+
+            # Remove everything not in the whitelist
+            for each in list(info_dict):
+                if each not in valid_keys:
+                    info_dict.pop(each, None)
+            for each in list(reused_torrent.metainfo):
+                if each not in ('announce', 'comment', 'creation date', 'created by', 'encoding', 'info'):
+                    reused_torrent.metainfo.pop(each, None)
+
+            reused_torrent.source = f"{shlex.quote(esource)}"
+            reused_torrent.private = True
+            Torrent.copy(reused_torrent).write(f"{shlex.quote(str(torrent_file))}", overwrite=True)
+    else:
+        try:
+            new_torrent = Torrent(path=str(directory_path),
+                                  name=directory_path.name,
+                                  trackers=[announceurl],
+                                  source=esource,
+                                  created_by=creator,
+                                  comment=ecomment,
+                                  randomize_infohash=True,
+                                  private=True,
+                                  piece_size_max=piece_size * 1048576)
+            if new_torrent.generate(callback=torf_cb, interval=5):
+                new_torrent.write(f"{shlex.quote(str(torrent_file))}", overwrite=True)
+                log_to_file(temp_dir_path / 'create_torrent_output.log',
+                            "New torrent successfully generated. Validating now")
+                print("New torrent successfully generated. Validating now")
+                try:
+                    Torrent.read(f"{shlex.quote(str(torrent_file))}").validate()
+                    new_torrent.verify_filesize(directory_path)
+                    log_to_file(temp_dir_path / 'create_torrent_output.log', "Torrent file successfully validated")
+                    print("Torrent file successfully validated")
+                except Exception as e:
+                    log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                    print(f"Error, generated torrent is not valid: {e}")
+                    return None, None
+            else:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', f"Failed to hash all pieces during torrent generation")
+                print(f"Failed to hash all pieces during torrent generation")
+                return None, None
+        except Exception as e:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                print(f"Error generating torrent: {e}")
+                return None, None
     try:
-        result = subprocess.run(torf_cmd, shell=True, text=True, capture_output=True)
-        
-        log_to_file(temp_dir_path / 'create_torrent_output.log', result.stdout)
-        log_to_file(temp_dir_path / 'create_torrent_error.log', result.stderr)
-        
-        if result.returncode != 0:
-            raise RuntimeError(f"torf command failed with exit code {result.returncode}")
-        
-        print(f"\033[92mTorrent created: {torrent_file}\n\033[0m")
+        print(f"\033[92mTorrent to be uploaded has been created: {torrent_file}\n\033[0m")
         return str(torrent_file), piece_size  # Return the path to the torrent file as a string
     except Exception as e:
         log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
         print(f"Error creating torrent: {e}")
         return None, None
+
+def calculate_size(directory):
+    """Calculate the directory size."""
+    total_size = sum(
+        os.path.getsize(os.path.join(root, file))
+        for root, _, files in os.walk(directory)
+        for file in files
+    )
+
+    return total_size
 
 def calculate_piece_size(directory):
     """Calculate the appropriate piece size for the torrent based on directory size."""
