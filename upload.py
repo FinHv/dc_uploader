@@ -1,3 +1,4 @@
+import platform
 import sys
 import os
 import re
@@ -129,7 +130,9 @@ def fail_exit(directory, cleanup_enabled):
 
 def main():
     """Main function to run the script."""
-
+    if platform.system() != 'Linux':
+        print("This tool is designed only for Linux")
+        exit(1)
     # Load configuration
     config = ConfigLoader().get_config()
     TMP_DIR = Path(config.get('Paths', 'TMP_DIR')) / str(os.getpid())

@@ -1,3 +1,5 @@
+import platform
+
 from flask import Flask, render_template, request, redirect, url_for, flash, session, jsonify
 from gevent import pywsgi
 import configparser
@@ -709,6 +711,9 @@ def get_logs():
     return jsonify({'data': log_data})
 
 if __name__ == '__main__':
+    if platform.system() != 'Linux':
+        print("This tool is designed only for Linux")
+        exit(1)
     logging.debug('Starting application...')
 
     # Initialize the SQLite database
