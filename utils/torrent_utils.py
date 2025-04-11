@@ -64,7 +64,7 @@ def create_torrent(directory, temp_dir):
         esource = config.get('Torrent', 'ESOURCE')
         creator = config.get('Torrent', 'CREATOR')
         announceurl = config.get('Torrent', 'ANNOUNCEURL')
-        etorrentpath = config.get('Torrent', 'ETORFPATH')
+        etorrentpath = config.get('Torrent', 'SOURCEPATH')
     except (configparser.NoOptionError, configparser.NoSectionError) as e:
         print(f"Config error: {e}")
         return None
@@ -73,11 +73,11 @@ def create_torrent(directory, temp_dir):
     temp_dir_path = Path(temp_dir)
     torrent_file = temp_dir_path / f"{directory_path.name}.torrent"
 
-    # Proceed only if ETORFPATH is not empty
+    # Proceed only if SOURCEPATH is not empty
     if etorrentpath:
         etorrent_file_path = Path(etorrentpath) / f"{directory_path.name}.torrent"
     else:
-        print("ETORFPATH is not configured; not reusing existing torrent. New torrent will be generated.")
+        print("SOURCEPATH is not configured; not reusing existing torrent. New torrent will be generated.")
         etorrent_file_path = None
 
     piece_size = calculate_piece_size(directory)

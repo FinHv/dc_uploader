@@ -38,7 +38,7 @@ A simple python tool built for ubuntu to create and upload torrents. Debian is u
     - APIKEY
     - CLIENT_ID
     - CLIENT_SECRET
-    - ETORFPATH
+    - SOURCEPATH
     - ANNOUNCEURL
     - WATCHFOLDER
     - DATADIR
@@ -58,7 +58,8 @@ Do not change the headers or location of the settings. If it is not mentioned be
 - APIKEY: Your TMDB API key to search for meta info.
 - CLIENT_ID: Your IGDB client ID to search for video game info.
 - CLIENT_SECRET: Your IGDB client secret to search for video game info
-- ETORFPATH: directory where .torrent files from source torrent site are downloaded to. If you are always rehashing new .torrent files when you upload (e.g. EDIT_TORRENT is set to false), this directory is largely irrelevant and can be just set to `tmp/`.
+- HASHER: What hash program to use. Can be either `torf` or `mkbrr`
+- SOURCEPATH: directory where .torrent files from source torrent site are downloaded to. If you are always rehashing new .torrent files when you upload (e.g. EDIT_TORRENT is set to false), this directory is largely irrelevant and can be just set to `tmp/`.
     - If EDIT_TORRENT is set to true, it will edit the torrent instead of creating a new one, which saves time.
 - ANNOUNCEURL: Your personal announce URL.
 - WATCHFOLDER: Path to the directory where .torrent file for the uploaded torrent is placed for the client to import, e.g., /uploaders/torrentwatch.
@@ -212,7 +213,7 @@ schedule2 = untied_directory,8,5,remove_untied=
 method.set_key = event.download.finished,upload_torrent,"execute=bash,/your/path/to/dc_uploader/upload.sh,$d.name="
 ```
 
-Here, sourcewatch is ETORFPATH, dcwatch is WATCHFOLDER, DATADIR would be whatever folder rtorrent downloads torrents into, and $d.name= is the directory to be uploaded. This example does not use discrete folders, modify as needed for discrete folders.
+Here, sourcewatch is SOURCEPATH, dcwatch is WATCHFOLDER, DATADIR would be whatever folder rtorrent downloads torrents into, and $d.name= is the directory to be uploaded. This example does not use discrete folders, modify as needed for discrete folders.
 
 **Example with qBittorrent:**
 
