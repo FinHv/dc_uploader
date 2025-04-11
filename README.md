@@ -1,4 +1,4 @@
-# Still under development
+# Still under active development, things might change/break
 
 ## What is DC Uploader?
 
@@ -199,6 +199,34 @@ A: This depends on how you set up the watch directory. By using a watch director
 #### Q: I use discrete directories, but I want to add it to a download-then-uploadToDCC automation pathway, how do I do that?
 
 A: Assuming you have created an upload directory as directed by the [discrete directories](https://github.com/FinHv/dc_uploader/tree/main?tab=readme-ov-file#discrete-directories) section, just pass the torrent content path to upload.sh with one of the relevant arguments. The script is the one that handles the linking/copying/moving.
+
+**Example with rtorrent:**
+
+```
+schedule2 = watch_directory_source,5,5,load.start=/uploaders/sourcewatch/*.torrent
+schedule2 = watch_directory,5,5,load.start=/uploaders/dcwatch/*.torrent
+schedule2 = tied_directory,6,5,start_tied=
+schedule2 = untied_directory,7,5,stop_untied=
+schedule2 = untied_directory,8,5,remove_untied=
+
+method.set_key = event.download.finished,upload_torrent,"execute=bash,/your/path/to/dc_uploader/upload.sh,$d.name="
+```
+
+Here, sourcewatch is ETORFPATH, dcwatch is WATCHFOLDER, DATADIR would be whatever folder rtorrent downloads torrents into, and $d.name= is the directory to be uploaded. This example does not use discrete folders, modify as needed for discrete folders.
+
+**Example with qBittorrent:**
+
+Navigate to "Downloads" in settings. Scroll to bottom, check "Run external program on torrent finished". Input:
+
+`/path/to/dc_uploader/upload.sh %F [ARG as needed]`
+
+`--mv` shouldn't be used since the torrent you just downloaded needs the data to stay in place.
+
+If you already have some command executing, just chain the command:
+
+`[some pre-existing command, e.g. cross-seed] && /path/to/dc_uploader/upload.sh %F [ARG as needed]`
+
+`&&` will only execute the upload if the previous command is successful. If you want upload regardless of the success of the previous command, replace `&&` with `;`
 
 #### Q: What happens if I pass the script a file instead of a directory?
 
