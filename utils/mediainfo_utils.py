@@ -30,15 +30,24 @@ def generate_mediainfo(directory, tmp_dir):
                 capture_output=True,
                 check=True
             )
+            """ Stored for quick undo. For now, just use one file's media info.
             file_info = result.stdout
             # Remove lines containing "Complete name:" with any amount of space or tab before the colon
             file_info = "\n".join(line for line in file_info.splitlines()
                                   if not re.match(r'\s*Complete name\s*:', line))
             mediainfo_output += file_info + "\n\n"
+            """
+            mediainfo_output = result.stdout
+            # Remove lines containing "Complete name:" with any amount of space or tab before the colon
+            mediainfo_output = "\n".join(line for line in mediainfo_output.splitlines()
+                                  if not re.match(r'\s*Complete name\s*:', line))
+            break
         except subprocess.CalledProcessError as e:
             # Handle errors in running mediainfo
             print(f"\033[91mError getting media info for {media_file}: {e}\033[0m")  # Red text for errors
-    
+            # Reset mediainfo_output for next run
+            mediainfo_output = None
+
     # Save mediainfo output to a file in the tmp_dir
     mediainfo_file_path = None
     if mediainfo_output:

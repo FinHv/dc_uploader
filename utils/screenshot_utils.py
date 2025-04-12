@@ -108,6 +108,12 @@ def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
                 if not screenshots_generated:
                     # Still can't generate screenshots
                     print(f"No screenshots generated for {media_file} with fallback mtn binary. Possibly broken media file")
+                else:
+                    # We successfully got screenshots, break out of the loop
+                    break
+            else:
+                # We successfully got screenshots, break out of the loop
+                break
         except subprocess.CalledProcessError as e:
             print(f"\033[91mError creating screenshots for {media_file}: {e}\033[0m")  # Red text for errors
         except Exception as e:
