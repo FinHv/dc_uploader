@@ -12,6 +12,7 @@ import cli_ui
 import requests
 from torf import Torrent, ReadError, BdecodeError, MetainfoError
 
+from utils.bcolors import bcolors
 from utils.config_loader import ConfigLoader
 from utils.fastresume_utils import add_fastresume
 from utils.logging_utils import log_to_file
@@ -262,7 +263,7 @@ def create_torrent(directory, temp_dir):
                 print(f"Error generating torrent: {e}")
                 return None, None
     try:
-        print(f"\033[92mTorrent to be uploaded has been created: {output_torrent}\n\033[0m")
+        print(f"{bcolors.OKGREEN}Torrent to be uploaded has been created: {output_torrent}\n{bcolors.ENDC}")
         return output_torrent, piece_size  # Return the path to the torrent file as a string
     except Exception as e:
         log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
@@ -335,7 +336,7 @@ def download_duplicate_torrent(url, cookies, release_name, is_dupe=False, dupe_i
         
         # Log the successful download
         log_to_file(os.path.join(TMP_DIR, log_file), f"Torrent downloaded successfully: {temp_torrent_path}")
-        print(f"\033[92mTorrent downloaded successfully: {temp_torrent_path}\n\033[0m")
+        print(f"{bcolors.OKGREEN}Torrent downloaded successfully: {temp_torrent_path}\n{bcolors.ENDC}")
         
         # Check if fast resume should be added
         add_fastresume_flag = config.getboolean('Settings', 'ADDFASTRESUME')
@@ -357,9 +358,9 @@ def download_duplicate_torrent(url, cookies, release_name, is_dupe=False, dupe_i
                 shutil.copyfile(fastresume_output_path, final_torrent_path)
                 os.remove(fastresume_output_path)
                 
-                print(f"\033[92mTorrent copied to watch folder: {final_torrent_path}\n\033[0m")
+                print(f"{bcolors.OKGREEN}Torrent copied to watch folder: {final_torrent_path}\n{bcolors.ENDC}")
             else:
-                print(f"\033[91mFast resume output file not found: {fastresume_output_path}\033[0m")
+                print(f"{bcolors.FAIL}Fast resume output file not found: {fastresume_output_path}{bcolors.ENDC}")
         else:
             final_torrent_path = os.path.join(WATCHFOLDER, f'{PREPENDNAME}{release_name}.torrent')
             
@@ -367,17 +368,17 @@ def download_duplicate_torrent(url, cookies, release_name, is_dupe=False, dupe_i
             shutil.copyfile(temp_torrent_path, final_torrent_path)
             os.remove(temp_torrent_path)
             
-            print(f"\033[92mTorrent copied to watch folder: {final_torrent_path}\n\033[0m")
+            print(f"{bcolors.OKGREEN}Torrent copied to watch folder: {final_torrent_path}\n{bcolors.ENDC}")
 
     except requests.RequestException as e:
         # Log any request exceptions
         log_to_file(os.path.join(TMP_DIR, 'dupe_download_error.log' if is_dupe else 'torrent_download_error.log'), f"Failed to download torrent: {str(e)}")
-        print(f"\033[91mFailed to download torrent: {str(e)}\033[0m")
+        print(f"{bcolors.FAIL}Failed to download torrent: {str(e)}{bcolors.ENDC}")
 
     except Exception as e:
         # General exception logging
         log_to_file(os.path.join(TMP_DIR, 'dupe_general_error.log' if is_dupe else 'torrent_general_error.log'), f"An error occurred: {str(e)}")
-        print(f"\033[91mAn error occurred: {str(e)}\033[0m")
+        print(f"{bcolors.FAIL}An error occurred: {str(e)}{bcolors.ENDC}")
 
 def upload_torrent(torrent_file, template_file, cookies, category_id, imdb_id, mediainfo_text):
     """
@@ -447,7 +448,7 @@ def upload_torrent(torrent_file, template_file, cookies, category_id, imdb_id, m
         log_to_file(os.path.join(TMP_DIR, 'upload_response.log'), f"Upload response status: {response.status_code}\n{response.text}")
         
         if response.status_code == 200:
-            print(f"\033[92mTorrent uploaded successfully.\n\033[0m")
+            print(f"{bcolors.OKGREEN}Torrent uploaded successfully.\n{bcolors.ENDC}")
             response_json = response.json()
             torrent_id = response_json.get('id')
             torrent_name = response_json.get('name')

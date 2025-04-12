@@ -4,6 +4,8 @@ import re
 import sys
 from configparser import ConfigParser
 
+from utils.bcolors import bcolors
+
 
 def load_config(config_file='config.ini'):
     """Load the configuration from the specified file."""
@@ -24,32 +26,32 @@ def determine_category(directory_name):
     full_directory_path = os.path.join(data_dir, directory_name)
     
     if not filters:
-        print("\033[92mNo filters loaded.\033[0m")
+        print(f"{bcolors.OKGREEN}No filters loaded.{bcolors.ENDC}")
         return 'Unknown', '17'  # Return default cat_id when no filters are loaded
 
     matched_category = 'Unknown'
     matched_category_id = '17'  # Default to '17' if no match is found
 
-    print(f"\033[33mFind the correct category\n\033[0m")
+    print(f"{bcolors.YELLOW}Find the correct category\n{bcolors.ENDC}")
     
     # Iterate over top-level configurations to find a match
     for filter_key, filter_config in filters.items():
-        print(f"\033[95mChecking top-level filter: {filter_key}\033[0m")
+        print(f"{bcolors.HEADER}Checking top-level filter: {filter_key}{bcolors.ENDC}")
         
         exclude_patterns = filter_config.get('patterns', {}).get('exclude_patterns', [])
-        print(f"\033[96mExclude Patterns for {filter_key}: {exclude_patterns}\033[0m")
+        print(f"{bcolors.ICyan}Exclude Patterns for {filter_key}: {exclude_patterns}{bcolors.ENDC}")
         
         # Check exclude patterns, skip if empty or blank
         if exclude_patterns and any(re.search(pattern, directory_name, re.IGNORECASE) for pattern in exclude_patterns if pattern.strip()):
-            print(f"\033[91mDirectory {directory_name} excluded by pattern in {filter_key}.\033[0m")
+            print(f"{bcolors.FAIL}Directory {directory_name} excluded by pattern in {filter_key}.{bcolors.ENDC}")
             continue  # Skip this filter if any exclude pattern matches
         
         initial_patterns = filter_config.get('patterns', {}).get('initial', [])
-        print(f"\033[96mInitial Patterns for {filter_key}: {initial_patterns}\033[0m")
+        print(f"{bcolors.ICyan}Initial Patterns for {filter_key}: {initial_patterns}{bcolors.ENDC}")
 
         # Check initial patterns
         if initial_patterns and any(re.search(pattern.replace('*', '.*'), directory_name, re.IGNORECASE) for pattern in initial_patterns):
-            print(f"\033[92mMatched initial patterns for top-level filter: {filter_key}\033[0m")
+            print(f"{bcolors.OKGREEN}Matched initial patterns for top-level filter: {filter_key}{bcolors.ENDC}")
 
             categories = filter_config.get('categories', [])
             for category_info in categories:
@@ -58,20 +60,20 @@ def determine_category(directory_name):
                 patterns = category_info.get('patterns', [])
                 unwanted_patterns = category_info.get('exclude_patterns', [])
 
-                print(f"\033[96mChecking category: {category_name} (ID: {category_id})\033[0m")
-                print(f"\033[96mCategory Patterns: {patterns}\033[0m")
-                print(f"\033[96mCategory Exclude Patterns: {unwanted_patterns}\033[0m")
+                print(f"{bcolors.ICyan}Checking category: {category_name} (ID: {category_id}){bcolors.ENDC}")
+                print(f"{bcolors.ICyan}Category Patterns: {patterns}{bcolors.ENDC}")
+                print(f"{bcolors.ICyan}Category Exclude Patterns: {unwanted_patterns}{bcolors.ENDC}")
 
                 # Check unwanted patterns for the category, skip if empty or blank
                 if unwanted_patterns and any(re.search(pattern, directory_name, re.IGNORECASE) for pattern in unwanted_patterns if pattern.strip()):
-                    print(f"\033[91mDirectory {directory_name} excluded by category pattern in {category_name}.\033[0m")
+                    print(f"{bcolors.FAIL}Directory {directory_name} excluded by category pattern in {category_name}.{bcolors.ENDC}")
                     continue  # Skip this category if unwanted patterns matched
 
                 # Check if the directory matches category patterns
                 if not patterns or any(re.search(pattern.replace('*', '.*'), directory_name, re.IGNORECASE) for pattern in patterns):
                     matched_category = category_name
                     matched_category_id = category_id
-                    print(f"\033[92mMatched category: {category_name} (ID: {category_id})\033[0m")
+                    print(f"{bcolors.OKGREEN}Matched category: {category_name} (ID: {category_id}){bcolors.ENDC}")
                     break  # Found a matching category, no need to check further categories in this filter
 
             if matched_category != 'Unknown':
@@ -83,10 +85,10 @@ def determine_category(directory_name):
             categories = filter_config.get('categories', [])
             for category_info in categories:
                 if category_info.get('default', False):
-                    print(f"\033[91mDirectory name matched default category: {category_info.get('name', 'Unknown')} (ID: {category_info.get('cat_id', 'Unknown')})\033[0m")
+                    print(f"{bcolors.FAIL}Directory name matched default category: {category_info.get('name', 'Unknown')} (ID: {category_info.get('cat_id', 'Unknown')}){bcolors.ENDC}")
                     return category_info.get('name', 'Unknown'), category_info.get('cat_id', 'Unknown')
 
-    print(f"\033[92mFound Category: {matched_category} (ID: {matched_category_id})\n\033[0m")
+    print(f"{bcolors.OKGREEN}Found Category: {matched_category} (ID: {matched_category_id})\n{bcolors.ENDC}")
     return matched_category, matched_category_id
 
 # Test with directory name as a command-line argument

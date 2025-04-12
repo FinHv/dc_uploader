@@ -5,6 +5,7 @@ from pathlib import Path
 
 import requests
 
+from utils.bcolors import bcolors
 from utils.config_loader import ConfigLoader
 
 # Load configuration
@@ -28,7 +29,7 @@ def extract_tv_show_details(directory_name):
 
 def get_imdb_tv_info(title, season=None, episode=None):
     """Fetch IMDb info based on the TV show title, season, and episode from TMDb."""
-    print(f"\033[33mTrying to extract IMDb info from TV show title: {title}\n\033[0m")
+    print(f"{bcolors.YELLOW}Trying to extract IMDb info from TV show title: {title}\n{bcolors.ENDC}")
     
     # Load API key from configuration
     api_key = config.get('TMDB', 'APIKEY')
@@ -49,7 +50,7 @@ def get_imdb_tv_info(title, season=None, episode=None):
 
         # Check if there are any results
         if 'results' in data and data['results']:
-            print(f"\033[92mTMDb info fetched successfully.\n\033[0m")
+            print(f"{bcolors.OKGREEN}TMDb info fetched successfully.\n{bcolors.ENDC}")
             
             # Iterate over results
             for result in data['results']:
@@ -63,15 +64,15 @@ def get_imdb_tv_info(title, season=None, episode=None):
                 imdb_id = fetch_imdb_id(tv_show_id, api_key, is_tv=True)
                 
                 if imdb_id:
-                    print(f"\033[92mIMDb ID: {imdb_id} found for the TV show.\n\033[0m")
+                    print(f"{bcolors.OKGREEN}IMDb ID: {imdb_id} found for the TV show.\n{bcolors.ENDC}")
                     return {"id": imdb_id, "title": tv_show_title, "year": release_year}
                 
-            print(f"\033[91mNo matching IMDb results found for the TV show.\n\033[0m")
+            print(f"{bcolors.FAIL}No matching IMDb results found for the TV show.\n{bcolors.ENDC}")
         else:
-            print(f"\033[91mNo IMDb results found for the TV show.\n\033[0m")
+            print(f"{bcolors.FAIL}No IMDb results found for the TV show.\n{bcolors.ENDC}")
         
     except requests.exceptions.RequestException as e:
-        print(f"\033[91mError fetching IMDb info: {str(e)}\n\033[0m")
+        print(f"{bcolors.FAIL}Error fetching IMDb info: {str(e)}\n{bcolors.ENDC}")
     
     return None
 
@@ -80,7 +81,7 @@ def get_imdb_tv_info(title, season=None, episode=None):
 
 def get_imdb_info(title, year=None):
     """Fetch IMDb info based on the title and optional year from TMDb."""
-    #print(f"\033[33mTrying to extract IMDb info from title: {title}\n\033[0m")
+    #print(f"{bcolors.YELLOW}Trying to extract IMDb info from title: {title}\n{bcolors.ENDC}")
     
     # Load API key from configuration
     config = ConfigLoader().get_config()
@@ -102,7 +103,7 @@ def get_imdb_info(title, year=None):
 
         # Check if there are any results
         if 'results' in data and data['results']:
-            print(f"\033[92mTMDb info fetched successfully.\n\033[0m")
+            print(f"{bcolors.OKGREEN}TMDb info fetched successfully.\n{bcolors.ENDC}")
             
             # Iterate over results and compare the year
             for result in data['results']:
@@ -121,10 +122,10 @@ def get_imdb_info(title, year=None):
                         imdb_id = fetch_imdb_id(movie_id, api_key)
                         
                         if imdb_id:
-                            print(f"\033[92mIMDb ID: {imdb_id} found for the movie.\n\033[0m")
+                            print(f"{bcolors.OKGREEN}IMDb ID: {imdb_id} found for the movie.\n{bcolors.ENDC}")
                             return {"id": imdb_id, "title": result['title'], "year": release_year}
                         else:
-                            print(f"\033[91mFailed to fetch IMDb ID for movie ID: {movie_id}\n\033[0m")
+                            print(f"{bcolors.FAIL}Failed to fetch IMDb ID for movie ID: {movie_id}\n{bcolors.ENDC}")
                     else:
                         print(f"Skipping result due to year mismatch: {release_year} != {year}")
                 else:
@@ -132,15 +133,15 @@ def get_imdb_info(title, year=None):
                     movie_id = result['id']
                     imdb_id = fetch_imdb_id(movie_id, api_key)
                     if imdb_id:
-                        print(f"\033[92mIMDb ID: {imdb_id} found for the movie.\n\033[0m")
+                        print(f"{bcolors.OKGREEN}IMDb ID: {imdb_id} found for the movie.\n{bcolors.ENDC}")
                         return {"id": imdb_id, "title": result['title'], "year": release_year}
 
-            print(f"\033[91mNo matching IMDb results found for the title with the given year.\n\033[0m")
+            print(f"{bcolors.FAIL}No matching IMDb results found for the title with the given year.\n{bcolors.ENDC}")
         else:
-            print(f"\033[91mNo IMDb results found for the title.\n\033[0m")
+            print(f"{bcolors.FAIL}No IMDb results found for the title.\n{bcolors.ENDC}")
         
     except requests.exceptions.RequestException as e:
-        print(f"\033[91mError fetching IMDb info: {str(e)}\n\033[0m")
+        print(f"{bcolors.FAIL}Error fetching IMDb info: {str(e)}\n{bcolors.ENDC}")
     
     return None
 
@@ -161,11 +162,11 @@ def fetch_imdb_id(media_id, api_key, is_tv=False):
         if 'imdb_id' in data and data['imdb_id']:
             return data['imdb_id']
         else:
-            print(f"\033[91mNo IMDb ID found for {media_type} ID: {media_id}\n\033[0m")
+            print(f"{bcolors.FAIL}No IMDb ID found for {media_type} ID: {media_id}\n{bcolors.ENDC}")
             return None
     
     except requests.exceptions.RequestException as e:
-        print(f"\033[91mError fetching IMDb ID: {str(e)}\n\033[0m")
+        print(f"{bcolors.FAIL}Error fetching IMDb ID: {str(e)}\n{bcolors.ENDC}")
         return None
 
 
@@ -175,17 +176,17 @@ def extract_imdb_link_from_nfo(directory):
 
     for nfo_file in nfo_files:
         nfo = os.path.basename(nfo_file)
-        print(f"\033[33mTrying to extract IMDb data from: {nfo}\n\033[0m")
+        print(f"{bcolors.YELLOW}Trying to extract IMDb data from: {nfo}\n{bcolors.ENDC}")
         
         with open(nfo_file, 'r', encoding='utf-8', errors='ignore') as file:
             content = file.read()
             # Match various IMDb link formats, including HTTPS and non-www URLs
             match = re.search(r'https?://(?:www\.)?imdb\.com/title/tt\d+', content)
             if match:
-                #print(f"\033[92mIMDb link found: {match.group(0)}\n\033[0m")
+                #print(f"{bcolors.OKGREEN}IMDb link found: {match.group(0)}\n{bcolors.ENDC}")
                 return match.group(0)
     
-    print(f"\033[91mNo IMDb link found in NFO files.\n\033[0m")
+    print(f"{bcolors.FAIL}No IMDb link found in NFO files.\n{bcolors.ENDC}")
     return None
 
 def extract_movie_details(directory_name):

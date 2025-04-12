@@ -5,6 +5,7 @@ from pathlib import Path
 
 import requests
 
+from utils.bcolors import bcolors
 from utils.config_loader import ConfigLoader
 from utils.logging_utils import log_to_file
 
@@ -52,7 +53,7 @@ def login():
     # Try to load existing cookies
     existing_cookies = load_cookies(COOKIE_PATH)
     if existing_cookies:
-        print("\033[0m\033[32mUsing existing cookies...\n\033[0m")
+        print(f"{bcolors.ENDC}{bcolors.GREEN}Using existing cookies...\n{bcolors.ENDC}")
         session.cookies.update(existing_cookies)
         return session.cookies
     
@@ -69,13 +70,13 @@ def login():
         
         # Check if login was successful
         if response.status_code == 200 and LOGINTXT in response.text:
-            print(f"\033[92mLogin successful.\n\033[0m")
+            print(f"{bcolors.OKGREEN}Login successful.\n{bcolors.ENDC}")
             return session.cookies
         else:
-            print(f"\033[91mLogin failed. Status code: {response.status_code}\033[0m")
+            print(f"{bcolors.FAIL}Login failed. Status code: {response.status_code}{bcolors.ENDC}")
             return None
     except requests.RequestException as e:
         # Log any request exceptions
         log_to_file(TMP_DIR / 'login_error.log', f"Login request failed: {str(e)}")
-        print(f"\033[91mLogin request failed: {str(e)}\033[0m")
+        print(f"{bcolors.FAIL}Login request failed: {str(e)}{bcolors.ENDC}")
         return None

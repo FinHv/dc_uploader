@@ -3,6 +3,7 @@ import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
 
+from utils.bcolors import bcolors
 from utils.config_loader import ConfigLoader
 from utils.logging_utils import log_to_file
 
@@ -88,12 +89,12 @@ def process_nfo(directory, replacements, log_file_path):
             # Update replacements with formatted NFO content
             replacements['!nfo!'] = f"[nfo]\n{nfo_content}\n[/nfo]"
             
-            print(f"\033[33mFound NFO data...\n\033[0m")
+            print(f"{bcolors.YELLOW}Found NFO data...\n{bcolors.ENDC}")
             log_to_file(log_file_path, f"NFO file processed successfully: {nfo_file.name}")
         else:
             replacements['!nfo!'] = ''
             log_to_file(log_file_path, "No .nfo file found in the directory.")
-            print(f"\033[31mDid not find NFO data...\n\033[0m")
+            print(f"{bcolors.RED}Did not find NFO data...\n{bcolors.ENDC}")
     except Exception as e:
         log_to_file(log_file_path, f"Error processing .nfo file: {str(e)}")
         replacements['!nfo!'] = ''

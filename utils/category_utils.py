@@ -2,7 +2,8 @@ import os
 import re
 from configparser import ConfigParser
 
-from .filters_utils import load_filters
+from utils.bcolors import bcolors
+from utils.filters_utils import load_filters
 
 
 def load_config(config_file='config.ini'):
@@ -18,7 +19,7 @@ def check_for_mp3_files(directory_path):
             if filename.lower().endswith('.mp3'):
                 return True
     except FileNotFoundError:
-        print(f"\033[33mDirectory not found: {directory_path}\033[0m")
+        print(f"{bcolors.YELLOW}Directory not found: {directory_path}{bcolors.ENDC}")
     return False
 
 def determine_category(directory_name):
@@ -29,21 +30,21 @@ def determine_category(directory_name):
     full_directory_path = os.path.join(data_dir, directory_name)
     
     if not filters:
-        print("\033[92mNo filters loaded.\033[0m")
+        print(f"{bcolors.OKGREEN}No filters loaded.{bcolors.ENDC}")
         return 'Unknown', '17'  # Return default cat_id when no filters are loaded
     
     # Check if there are any .mp3 files in the directory
     if check_for_mp3_files(full_directory_path):
-        print("\033[93mDirectory contains .mp3 files. Categorizing as Music/MP3.\033[0m")
+        print(f"{bcolors.WARNING}Directory contains .mp3 files. Categorizing as Music/MP3.{bcolors.ENDC}")
         return 'Music/MP3', '22'  # Return the MP3 category directly
 
     matched_category = 'Unknown'
     matched_category_id = '17'  # Default to '17' if no match is found
 
-    print(f"\033[33mFind the correct category\n\033[0m")  # Add 'f' for f-string
+    print(f"{bcolors.YELLOW}Find the correct category\n{bcolors.ENDC}")  # Add 'f' for f-string
     # Iterate over top-level configurations to find a match
     for filter_key, filter_config in filters.items():        
-        print(f"\033[95mChecking top-level filter: {filter_key}\033[0m")  # Add 'f' for f-string
+        print(f"{bcolors.HEADER}Checking top-level filter: {filter_key}{bcolors.ENDC}")  # Add 'f' for f-string
         exclude_patterns = filter_config.get('patterns', {}).get('exclude_patterns', [])
         
         # Skip empty exclude patterns
@@ -53,7 +54,7 @@ def determine_category(directory_name):
         initial_patterns = filter_config.get('patterns', {}).get('initial', [])
         
         if initial_patterns and any(re.search(pattern.replace('*', '.*'), directory_name, re.IGNORECASE) for pattern in initial_patterns):
-            print(f"\033[92m\nMatched initial patterns for top-level filter: {filter_key}\n\033[0m")  # Add 'f' for f-string
+            print(f"{bcolors.OKGREEN}\nMatched initial patterns for top-level filter: {filter_key}\n{bcolors.ENDC}")  # Add 'f' for f-string
 
             categories = filter_config.get('categories', [])
             for category_info in categories:
@@ -80,8 +81,8 @@ def determine_category(directory_name):
             categories = filter_config.get('categories', [])
             for category_info in categories:
                 if category_info.get('default', False):
-                    print(f"\033[91mDirectory name matched default category: {category_info.get('name', 'Unknown')} (ID: {category_info.get('cat_id', 'Unknown')})\033[0m")  # Add 'f' for f-string
+                    print(f"{bcolors.FAIL}Directory name matched default category: {category_info.get('name', 'Unknown')} (ID: {category_info.get('cat_id', 'Unknown')}){bcolors.ENDC}")  # Add 'f' for f-string
                     return category_info.get('name', 'Unknown'), category_info.get('cat_id', 'Unknown')
 
-    print(f"\033[92mFound Category: {matched_category} (ID: {matched_category_id})\n\033[0m")  # Add 'f' for f-string
+    print(f"{bcolors.OKGREEN}Found Category: {matched_category} (ID: {matched_category_id})\n{bcolors.ENDC}")  # Add 'f' for f-string
     return matched_category, matched_category_id

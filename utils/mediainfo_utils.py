@@ -2,13 +2,15 @@ import re
 import subprocess
 from pathlib import Path
 
+from utils.bcolors import bcolors
+
 
 def generate_mediainfo(directory, tmp_dir):
     """Generate media info for movie files in the given directory using the mediainfo executable, and save to a file in tmp_dir."""
     movie_extensions = ['*.mp4', '*.mkv', '*.avi', '*.mov', '*.flv', '*.wmv', '*.mpg', '*.mpeg', '*.webm', '*.m4v']
     
     mediainfo_output = ""
-    print(f"\033[33mCreating mediainfo for directory: {directory}\n\033[0m") 
+    print(f"{bcolors.YELLOW}Creating mediainfo for directory: {directory}\n{bcolors.ENDC}")
 
     # Collect all movie files matching the extensions recursively
     media_files = []
@@ -18,7 +20,7 @@ def generate_mediainfo(directory, tmp_dir):
         media_files.extend(found_files)
     
     if not media_files:
-        print("\033[91mNo media files found.\033[0m")  # Red text for no files found
+        print(f"{bcolors.FAIL}No media files found.{bcolors.ENDC}")  # Red text for no files found
     
     for media_file in media_files:
         print(f"Processing file: {media_file}\n")
@@ -32,7 +34,7 @@ def generate_mediainfo(directory, tmp_dir):
             )
         except subprocess.CalledProcessError as e:
             # Handle errors in running mediainfo
-            print(f"\033[91mError getting media info for {media_file}: {e}\033[0m")  # Red text for errors
+            print(f"{bcolors.FAIL}Error getting media info for {media_file}: {e}{bcolors.ENDC}")  # Red text for errors
             # Reset mediainfo_output for next run
             mediainfo_output = ''
         else:
@@ -41,7 +43,7 @@ def generate_mediainfo(directory, tmp_dir):
             # Remove lines containing "Complete name:" with any amount of space or tab before the colon
             file_info = "\n".join(line for line in file_info.splitlines()
                                   if not re.match(r'\s*Complete name\s*:', line))
-            mediainfo_output += file_info + "\n\n"
+            mediainfo_output += file_info + "\#n\#n"
             """
             mediainfo_output = result.stdout
             # Remove lines containing "Complete name:" with any amount of space or tab before the colon
@@ -58,6 +60,6 @@ def generate_mediainfo(directory, tmp_dir):
         with open(mediainfo_file_path, 'w') as file:
             file.write(mediainfo_output)
         
-        print(f"\033[92mMediaInfo created and saved to: {mediainfo_file_path}\n\033[0m")  # Green text for success
+        print(f"{bcolors.OKGREEN}MediaInfo created and saved to: {mediainfo_file_path}\n{bcolors.ENDC}")  # Green text for success
     
     return mediainfo_file_path

@@ -7,28 +7,28 @@ version = config.get('Header', 'VERSION')
 date = config.get('Header', 'DATE')
 text = config.get('Header', 'TEXT')
 
-def ascii_art_header(section_name):
+def ascii_art_header(section_name, program_version = None):
     """
     Generates ASCII art headers for different sections.
 
     Args:
         section_name (str): The name of the section for which the ASCII art header is to be generated.
-
+        program_version (str): The program version to be included in the ASCII art header
     Returns:
         str: The ASCII art string for the given section, with terminal cleared and text color set.
     """
     headers = {
         "Header": f"""
-                _          _    _       _                 _   ____        _   
-     /\        | |        | |  | |     | |               | | |  _ \      | |  
-    /  \  _   _| |_ ___   | |  | |_ __ | | ___   __ _  __| | | |_) | ___ | |_ 
-   / /\ \| | | | __/ _ \  | |  | | '_ \| |/ _ \ / _` |/ _` | |  _ < / _ \| __|
-  / ____ \ |_| | || (_) | | |__| | |_) | | (_) | (_| | (_| | | |_) | (_) | |_ 
- /_/    \_\__,_|\__\___/   \____/| .__/|_|\___/ \__,_|\__,_| |____/ \___/ \__|
-                                 | |                                          
-                                 |_|                    
-						 by R4bb1t & UnpooledUnit v{version}
- {text}                                              {date}
+  _____   _____   _    _       _                 _           
+ |  __ \ / ____| | |  | |     | |               | |          
+ | |  | | |      | |  | |_ __ | | ___   __ _  __| | ___ _ __ 
+ | |  | | |      | |  | | '_ \| |/ _ \ / _` |/ _` |/ _ \ '__|
+ | |__| | |____  | |__| | |_) | | (_) | (_| | (_| |  __/ |   
+ |_____/ \_____|  \____/| .__/|_|\___/ \__,_|\__,_|\___|_|   
+                        | |                                  
+                        |_|                                  
+						 by R4bb1t & UnpooledUnit v{program_version}
+ {text}                             config.ini date: {date}
 -----------------------------------------------------------------------------
         """,
         "Login": """

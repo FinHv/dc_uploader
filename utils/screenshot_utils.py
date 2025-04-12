@@ -3,6 +3,7 @@ import re
 import subprocess
 from pathlib import Path
 
+from utils.bcolors import bcolors
 from utils.config_loader import ConfigLoader
 
 # Load configuration settings
@@ -38,7 +39,7 @@ def generate_screenshots(directory, category_id):
 
     # Check if RAR2FS should be used
     if rar2fs_screenshots_enabled and category_id in rar2fs_categories:
-        print(f"\033[33mRAR2FS Enabled, mounting RAR files\n\033[0m")
+        print(f"{bcolors.YELLOW}RAR2FS Enabled, mounting RAR files\n{bcolors.ENDC}")
         rar_files = list(Path(directory).rglob('*.rar'))
         if rar_files:
             for rar_file in rar_files:
@@ -68,7 +69,7 @@ def process_media_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
     root_files = []
     screenshots_generated = False
     
-    print(f"\033[33mCreating screenshots\n\033[0m")
+    print(f"{bcolors.YELLOW}Creating screenshots\n{bcolors.ENDC}")
     
     # Collect movie files in the root of the directory
     for ext in valid_movie_extension:
@@ -82,7 +83,7 @@ def process_media_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
         media_files.extend(Path(directory).rglob(ext))
     
     if not media_files:
-        print("\033[91mNo media files found.\033[0m")  # Red text for no files found
+        print(f"{bcolors.FAIL}No media files found.{bcolors.ENDC}")  # Red text for no files found
         return
 
     # Log the number of media files found
@@ -95,7 +96,7 @@ def process_media_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
             if re.search(r'[Ss][Aa][Mm][Pp][Ll][Ee]', str(media_file)):
                 skip_file = True
         if skip_file:
-            print(f"\033[33mSkipping sample file: {media_file}\033[0m")
+            print(f"{bcolors.YELLOW}Skipping sample file: {media_file}{bcolors.ENDC}")
             continue
 
         print(f"Processing {media_file}")
@@ -117,7 +118,7 @@ def process_media_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
 
     # If no screenshots were generated, and it's not a RAR2FS mount, check sample directories
     if not screenshots_generated and not is_rar2fs:
-        print(f"\033[33mNo screenshots generated from mounted files. Checking sample directories...\033[0m")
+        print(f"{bcolors.YELLOW}No screenshots generated from mounted files. Checking sample directories...{bcolors.ENDC}")
         # Process movie files in sample directories if no screenshots were generated
         sample_dirs = [d for d in Path(directory).rglob('*[Ss][Aa][Mm][Pp][Ll][Ee]*') if d.is_dir()]
         if sample_dirs:
@@ -132,9 +133,9 @@ def mtn_exec(command_opts, media_file, mtn_path, screenshots_dir):
     try:
         result = subprocess.run(command, capture_output=True, text=True)
     except subprocess.CalledProcessError as e:
-        print(f"\033[91mError creating screenshots for {media_file}: {e}\033[0m")  # Red text for errors
+        print(f"{bcolors.FAIL}Error creating screenshots for {media_file}: {e}{bcolors.ENDC}")  # Red text for errors
     except Exception as e:
-        print(f"\033[91mUnexpected error for {media_file}: {e}\033[0m")  # Red text for unexpected errors
+        print(f"{bcolors.FAIL}Unexpected error for {media_file}: {e}{bcolors.ENDC}")  # Red text for unexpected errors
     else:
         # Debug
         # print(f"Command output: {result.stdout}")

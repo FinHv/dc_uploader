@@ -7,7 +7,10 @@ import sys
 import time
 from pathlib import Path
 
+import requests
+
 from utils.art_utils import ascii_art_header
+from utils.bcolors import bcolors
 from utils.category_utils import determine_category
 from utils.config_loader import ConfigLoader
 from utils.database_utils import insert_upload, update_upload_status
@@ -24,6 +27,7 @@ from utils.screenshot_utils import generate_screenshots
 from utils.status_utils import update_status
 from utils.template_utils import prepare_template
 from utils.torrent_utils import create_torrent, upload_torrent
+from utils.bcolors import bcolors
 
 
 class CustomOutput:
@@ -120,25 +124,37 @@ def cleanup_tmp_dir(directory, cleanup_enabled):
         try:
             if directory.exists() and directory.is_dir():
                 shutil.rmtree(directory)
-                print(f"Cleaned up temporary directory: {directory}")
+                print(f"Cleaned up temporary directory: {directory}{bcolors.ENDC}")
         except Exception as e:
-            print(f"Error during cleanup: {str(e)}")
+            print(f"Error during cleanup: {str(e)}{bcolors.ENDC}")
 
 def fail_exit(directory, cleanup_enabled):
     cleanup_tmp_dir(directory, cleanup_enabled)
     exit(1)
+
+def version_check(program_version):
+    # Get latest version number from GitHub
+    new_version = requests.get("https://api.github.com/repos/FinHv/dc_uploader/releases/latest").json()["name"]
+    if new_version != program_version:
+        print(f"{bcolors.WARNING}Warning:{bcolors.ENDC} new version available: v{new_version}")
+        # Sleep 5 seconds if there is an update so user can actually see it before being flooded with text
+        time.sleep(5)
 
 def main():
     """Main function to run the script."""
     if platform.system() != 'Linux':
         print("This tool is designed only for Linux")
         exit(1)
+
     # Load configuration
     config = ConfigLoader().get_config()
     TMP_DIR = Path(config.get('Paths', 'TMP_DIR')) / str(os.getpid())
     TEMPLATE_PATH = Path(config.get('Paths', 'TEMPLATE_PATH'))
     upload_log_path = Path(config.get('Paths', 'UPLOADLOG'))
     cleanup_enabled = config.getboolean('Settings', 'CLEANUP')
+    program_version = "1.1.0"
+
+    version_check(program_version)
 
     try:
         # Ensure TMP_DIR exists
@@ -161,15 +177,15 @@ def main():
             log("No directory name provided.", log_file_path)
             fail_exit(TMP_DIR, cleanup_enabled)
 
-        print(ascii_art_header("Header"))
-        print("\033[0m\033[94mStarting upload script...\n\033[0m")
+        print(ascii_art_header("Header", program_version))
+        print(f"{bcolors.ENDC}{bcolors.OKBLUE}Starting upload script...\n{bcolors.ENDC}")
 
         base_dir = Path(config.get('Paths', 'DATADIR'))
         directory = base_dir / directory_name
 
         if not directory.exists():
             log(f"The provided directory does not exist: {directory}", log_file_path)
-            print(f"\033[0m\033[91mDirectory does not exist: {directory}\n\033[0m")
+            print(f"{bcolors.ENDC}{bcolors.FAIL}Directory does not exist: {directory}\n{bcolors.ENDC}")
             fail_exit(TMP_DIR, cleanup_enabled)
 
         update_status(directory, 'uploading')
@@ -204,39 +220,39 @@ def main():
 
         # Print settings status
         print()
-        print(f"\033[31m################ Settings ################\n\033[0m")
-        print(f"\033[32mScreenshots enabled: {screenshots_enabled}\033[0m")
-        print(f"\033[32mRAR2FS enabled: {rar2fs_screenshots_enabled}\033[0m")
-        print(f"\033[32mMediainfo enabled: {mediainfo_enabled}\033[0m")
-        print(f"\033[32mDupecheck enabled: {dupecheck_enabled}\033[0m")
-        print(f"\033[32mDupedownload enabled: {dupedl_enabled}\033[0m")
-        print(f"\033[32mFastresume enabled: {fast_resume}\033[0m")
-        print(f"\033[32mIMDB enabled: {imdb_enabled}\033[0m")
-        print(f"\033[32mGameinfo enabled: {gameinfo_enabled}\033[0m")
-        print(f"\033[32mImage Upload enabled: {image_upload_enabled}\033[0m")
-        print(f"\033[32mCleanup enabled: {cleanup_enabled}\033[0m")
-        print(f"\033[32mLoading filters: {filters_path}\033[0m")
-        print(f"\033[32mLoading uploadlog: {upload_log}\n\033[0m")
-        print(f"\033[31m################ Settings ################\033[0m")
+        print(f"{bcolors.RED}################ Settings ################\n{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Screenshots enabled: {screenshots_enabled}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}RAR2FS enabled: {rar2fs_screenshots_enabled}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Mediainfo enabled: {mediainfo_enabled}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Dupecheck enabled: {dupecheck_enabled}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Dupedownload enabled: {dupedl_enabled}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Fastresume enabled: {fast_resume}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}IMDB enabled: {imdb_enabled}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Gameinfo enabled: {gameinfo_enabled}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Image Upload enabled: {image_upload_enabled}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Cleanup enabled: {cleanup_enabled}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Loading filters: {filters_path}{bcolors.ENDC}")
+        print(f"{bcolors.GREEN}Loading uploadlog: {upload_log}\n{bcolors.ENDC}")
+        print(f"{bcolors.RED}################ Settings ################{bcolors.ENDC}")
         print()
 
         print(ascii_art_header("Login"))
-        print("\033[0m\033[33mLogging in...\n\033[0m")
+        print(f"{bcolors.ENDC}{bcolors.YELLOW}Logging in...\n{bcolors.ENDC}")
         # Login and get cookies
         try:
             cookies = login()  # Call the login function from login.utils.py
             if not cookies:
                 log_to_file(log_file_path, "Login failed. Cannot proceed with the script.")
-                print("\033[31mLogin failed. Cannot proceed with the script.\n\033[0m")
+                print(f"{bcolors.RED}Login failed. Cannot proceed with the script.\n{bcolors.ENDC}")
                 fail_exit(TMP_DIR, cleanup_enabled)
             else:
-                print("\033[92mLogin successful. Proceeding...\n\033[0m")
+                print(f"{bcolors.OKGREEN}Login successful. Proceeding...\n{bcolors.ENDC}")
                 # Continue with the rest of your script using the cookies
                 # For example:
                 # upload_data(cookies)
         except Exception as e:
             log_to_file(log_file_path, f"Error during login: {str(e)}")
-            print(f"\033[91mError during login: {str(e)}\n\033[0m")
+            print(f"{bcolors.FAIL}Error during login: {str(e)}\n{bcolors.ENDC}")
             fail_exit(TMP_DIR, cleanup_enabled)
 
         insert_upload(name=directory_name)
@@ -282,7 +298,7 @@ def main():
         update_upload_status(name=directory_name, new_status='uploading', size=f'{upload_details["size"]}', category=f'{category_name}')
 
         # Initialize replacements dictionary with version info.
-        replacements = {'!version!': config.get('Header', 'VERSION')}
+        replacements = {'!version!': program_version}
         ### Screenshots processing section
         if screenshots_enabled:
             print(ascii_art_header("Screenshots"))
@@ -319,55 +335,55 @@ def main():
         imdb_link = ''
         if imdb_enabled:
             print(ascii_art_header("IMDB"))
-            print(f"\033[33mFind IMDB data\n\033[0m")
+            print(f"{bcolors.YELLOW}Find IMDB data\n{bcolors.ENDC}")
             if category_id in imdb_movie_categories or category_id in imdb_tv_categories:
                 # Attempt to extract IMDb link from .nfo file
                 imdb_link = extract_imdb_link_from_nfo(directory)
                 if imdb_link:
-                    print(f"\033[92mIMDb link found in NFO: {imdb_link}\n\033[0m")
+                    print(f"{bcolors.OKGREEN}IMDb link found in NFO: {imdb_link}\n{bcolors.ENDC}")
                     update_upload_status(name=directory_name, imdb_url=imdb_link)  # Update IMDb URL in DB
                 else:
                     if category_id in imdb_movie_categories:
-                        print(f"\033[33mNo IMDb link found in NFO or no NFO file present. Attempting to extract movie details from title.\n\033[0m")
+                        print(f"{bcolors.YELLOW}No IMDb link found in NFO or no NFO file present. Attempting to extract movie details from title.\n{bcolors.ENDC}")
                         title, year = extract_movie_details(directory_name)
                         if title:
                             imdb_info = get_imdb_info(title, year)
                             if imdb_info:
                                 imdb_link = f"https://www.imdb.com/title/{imdb_info['id']}/"
-                                print(f"\033[92mIMDb link found: {imdb_link}\n\033[0m")
+                                print(f"{bcolors.OKGREEN}IMDb link found: {imdb_link}\n{bcolors.ENDC}")
                                 update_upload_status(name=directory_name, imdb_url=imdb_link)  # Update IMDb URL in DB
                             else:
-                                print(f"\033[91mNo IMDb info found.\033[0m")
+                                print(f"{bcolors.FAIL}No IMDb info found.{bcolors.ENDC}")
                         else:
-                            print(f"\033[91mCould not extract movie details from directory name.\033[0m")
+                            print(f"{bcolors.FAIL}Could not extract movie details from directory name.{bcolors.ENDC}")
                     elif category_id in imdb_tv_categories:
-                        print(f"\033[33mNo IMDb link found in NFO or no NFO file present. Attempting to extract TV show details from title.\n\033[0m")
+                        print(f"{bcolors.YELLOW}No IMDb link found in NFO or no NFO file present. Attempting to extract TV show details from title.\n{bcolors.ENDC}")
                         title, season, episode = extract_tv_show_details(directory_name)
                         if title:
                             imdb_info = get_imdb_tv_info(title, season, episode)
                             if imdb_info:
                                 imdb_link = f"https://www.imdb.com/title/{imdb_info['id']}/"
-                                print(f"\033[92mIMDb link found: {imdb_link}\n\033[0m")
+                                print(f"{bcolors.OKGREEN}IMDb link found: {imdb_link}\n{bcolors.ENDC}")
                                 update_upload_status(name=directory_name, imdb_url=imdb_link)  # Update IMDb URL in DB
                             else:
-                                print(f"\033[91mNo IMDb info found.\033[0m")
+                                print(f"{bcolors.FAIL}No IMDb info found.{bcolors.ENDC}")
                         else:
-                            print(f"\033[91mCould not extract TV show details from directory name.\033[0m")
+                            print(f"{bcolors.FAIL}Could not extract TV show details from directory name.{bcolors.ENDC}")
             else:
-                print(f"\033[33mCategory ID {category_id} is not in the IMDb categories: {imdb_movie_categories} or {imdb_tv_categories}\033[0m")
+                print(f"{bcolors.YELLOW}Category ID {category_id} is not in the IMDb categories: {imdb_movie_categories} or {imdb_tv_categories}{bcolors.ENDC}")
 
         imdb_id = re.search(r'tt\d+', imdb_link).group() if imdb_link else ''
 
         # Game information processing
         if gameinfo_enabled and category_id in game_categories:
             print(ascii_art_header("Gameinfo"))
-            print("\033[33mFetching game information...\n\033[0m")
+            print(f"{bcolors.YELLOW}Fetching game information...\n{bcolors.ENDC}")
             try:
                 # Use the correct function for extracting the game name from the release name or directory
                 game_name = extract_game_name(directory_name)  # Ensure this function exists and works
 
                 if game_name:
-                    print(f"\033[33mExtracted Game Name: {game_name}\033[0m")
+                    print(f"{bcolors.YELLOW}Extracted Game Name: {game_name}{bcolors.ENDC}")
 
                     # Fetch game information from IGDB
                     game_info = fetch_game_info(game_name, directory_name)
@@ -387,24 +403,24 @@ def main():
                         )
 
                         # Log and display fetched game info
-                        print(f"\033[32mFetched Game Info:\n{gameinfo_content}\033[0m")
+                        print(f"{bcolors.GREEN}Fetched Game Info:\n{gameinfo_content}{bcolors.ENDC}")
 
                         # Insert gameinfo content into replacements
                         replacements['!gameinfo!'] = gameinfo_content
-                        print("\033[32mGame information successfully fetched and added to template!\033[0m")
+                        print(f"{bcolors.GREEN}Game information successfully fetched and added to template!{bcolors.ENDC}")
                     else:
                         # Handle case when no game info is found
                         replacements['!gameinfo!'] = ''
-                        print(f"\033[31mNo game information found for {game_name}.\n\033[0m")
+                        print(f"{bcolors.RED}No game information found for {game_name}.\n{bcolors.ENDC}")
                 else:
-                    print("\033[31mGame name could not be extracted from the NFO or directory.\n\033[0m")
+                    print(f"{bcolors.RED}Game name could not be extracted from the NFO or directory.\n{bcolors.ENDC}")
                     replacements['!gameinfo!'] = ''
 
             except Exception as e:
                 # Handle exceptions and log errors
                 replacements['!gameinfo!'] = ''
                 log(f"Error fetching game information: {str(e)}", log_file_path)
-                print(f"\033[31mError fetching game information: {str(e)}\033[0m")
+                print(f"{bcolors.RED}Error fetching game information: {str(e)}{bcolors.ENDC}")
         else:
             # If gameinfo is disabled or category is not in game categories
             replacements['!gameinfo!'] = ''
@@ -433,7 +449,7 @@ def main():
         # Image upload processing
         print(ascii_art_header("UploadImages"))
         if image_upload_enabled:
-            print(f"\033[33mUploading images...\n\033[0m")
+            print(f"{bcolors.YELLOW}Uploading images...\n{bcolors.ENDC}")
             try:
                 # Collect all image URLs from the source directory
                 source_image_urls = upload_images(directory)
@@ -442,14 +458,14 @@ def main():
                     image_urls_str = '\n'.join(source_image_urls)
                     update_upload_status(name=directory_name, image_url=image_urls_str)
                     replacements['!imageupload!'] = '\n'.join(source_image_urls)
-                    print(f"\033[32mImage upload successful!\n\033[0m")  # Print success message
+                    print(f"{bcolors.GREEN}Image upload successful!\n{bcolors.ENDC}")  # Print success message
                 else:
                     replacements['!imageupload!'] = ''
-                    print(f"\033[31mNo images found in the source directory.\n\033[0m")  # Print no images found message
+                    print(f"{bcolors.RED}No images found in the source directory.\n{bcolors.ENDC}")  # Print no images found message
 
                 # Upload the screenshots and get URLs
                 if screenshots_enabled:
-                    print(f"\033[33mUploading screenshots...\n\033[0m")
+                    print(f"{bcolors.YELLOW}Uploading screenshots...\n{bcolors.ENDC}")
                     screenshots_dir = TMP_DIR / 'screens'
                     if screenshots_dir.exists():
                         screenshot_urls = upload_images(screenshots_dir, is_screenshots=True)
@@ -458,18 +474,18 @@ def main():
                             screenshot_urls_str = '\n'.join(screenshot_urls)
                             update_upload_status(name=directory_name, screenshot_url=screenshot_urls_str)
                             replacements['!screenshots!'] = '\n'.join(screenshot_urls)
-                            print(f"\033[32mScreenshot upload successful!\033[0m")  # Print success message
+                            print(f"{bcolors.GREEN}Screenshot upload successful!{bcolors.ENDC}")  # Print success message
                         else:
                             replacements['!screenshots!'] = ''
-                            print(f"\033[31mNo screenshots found.\n\033[0m")  # Print no screenshots found message
+                            print(f"{bcolors.RED}No screenshots found.\n{bcolors.ENDC}")  # Print no screenshots found message
                     else:
                         replacements['!screenshots!'] = ''
-                        print(f"\033[31mScreenshots directory not found or it is empty.\n\033[0m")
+                        print(f"{bcolors.RED}Screenshots directory not found or it is empty.\n{bcolors.ENDC}")
 
                 # Upload the game images if game info is available and game images exist
                 game_image_dir = TMP_DIR / 'images'
                 if game_image_dir.exists() and any(game_image_dir.iterdir()):
-                    print(f"\033[33mUploading game images...\n\033[0m")
+                    print(f"{bcolors.YELLOW}Uploading game images...\n{bcolors.ENDC}")
 
                     # Sort files based on the number prefix (1-cover, 2-screenshot, etc.)
                     sorted_images = sorted(game_image_dir.iterdir(), key=lambda x: int(x.name.split('-')[0]))
@@ -488,27 +504,27 @@ def main():
                         game_image_urls_str = '\n'.join(game_image_urls)
                         update_upload_status(name=directory_name, image_url=game_image_urls_str)
                         replacements['!gameimage!'] = '\n'.join(game_image_urls)
-                        print(f"\033[32mGame image upload successful!\n\033[0m")
+                        print(f"{bcolors.GREEN}Game image upload successful!\n{bcolors.ENDC}")
                     else:
                         replacements['!gameimage!'] = ''
-                        print(f"\033[31mNo game images found.\n\033[0m")
+                        print(f"{bcolors.RED}No game images found.\n{bcolors.ENDC}")
                 else:
                     replacements['!gameimage!'] = ''
-                    print(f"\033[31mNo game images directory found.\n\033[0m")
+                    print(f"{bcolors.RED}No game images directory found.\n{bcolors.ENDC}")
 
             except Exception as e:
                 log(f"Error uploading images: {str(e)}", log_file_path)
-                print(f"\033[31mError uploading images: {str(e)}\033[0m")  # Print error message
+                print(f"{bcolors.RED}Error uploading images: {str(e)}{bcolors.ENDC}")  # Print error message
 
         # Process .nfo file
         print(ascii_art_header("NFO"))
-        print(f"\033[33m\nFinding NFO data...\n\033[0m")
+        print(f"{bcolors.YELLOW}\nFinding NFO data...\n{bcolors.ENDC}")
         try:
             process_nfo(directory, replacements, log_file_path)
         except Exception as e:
             log(f"Error processing .nfo file: {str(e)}", log_file_path)
 
-        print(f"\033[32mAdd directory name to template\n\033[0m")
+        print(f"{bcolors.GREEN}Add directory name to template\n{bcolors.ENDC}")
         replacements['!releasename!'] = directory_name
 
        # Prepare and save the final template with all content
@@ -544,7 +560,7 @@ def main():
         print(ascii_art_header("Uploading"))
 
         # Print and log variables before upload
-        print("\033[33mUploading torrent...\n\033[0m")
+        print(f"{bcolors.YELLOW}Uploading torrent...\n{bcolors.ENDC}")
         #print(f"Torrent file: {torrent_file}")
         #print(f"Template content: {template_content}")
         #print(f"Cookies: {cookies}")
