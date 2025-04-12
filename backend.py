@@ -4,7 +4,6 @@ import re
 import shutil
 import sqlite3
 import sys
-import time
 from pathlib import Path
 
 import requests
@@ -136,8 +135,6 @@ def version_check(program_version):
     new_version = requests.get("https://api.github.com/repos/FinHv/dc_uploader/releases/latest").json()["name"]
     if new_version != program_version:
         print(f"{bcolors.WARNING}Warning:{bcolors.ENDC} new version available: v{new_version}")
-        # Sleep 5 seconds if there is an update so user can actually see it before being flooded with text
-        time.sleep(5)
 
 def main():
     """Main function to run the script."""
@@ -152,8 +149,6 @@ def main():
     upload_log_path = Path(config.get('Paths', 'UPLOADLOG'))
     cleanup_enabled = config.getboolean('Settings', 'CLEANUP')
     program_version = "1.1.0"
-
-    version_check(program_version)
 
     try:
         # Ensure TMP_DIR exists
@@ -176,8 +171,11 @@ def main():
             log("No directory name provided.", log_file_path)
             fail_exit(TMP_DIR, cleanup_enabled)
 
-        print(ascii_art_header("Header", program_version))
-        print(f"{bcolors.ENDC}{bcolors.OKBLUE}Starting upload script...\n{bcolors.ENDC}")
+        print(ascii_art_header("Header", program_version) + bcolors.ENDC)
+        from time import sleep
+        version_check(program_version)
+        sleep(3) # Sleep 3 seconds so users can see our pretty header :)
+        print(f"{bcolors.OKBLUE}Starting upload script...\n{bcolors.ENDC}")
 
         base_dir = Path(config.get('Paths', 'DATADIR'))
         directory = base_dir / directory_name
