@@ -1,3 +1,4 @@
+import io
 import os
 import platform
 import re
@@ -29,7 +30,7 @@ from utils.template_utils import prepare_template
 from utils.torrent_utils import create_torrent, upload_torrent
 
 
-class CustomOutput:
+class CustomOutput(io.TextIOBase):
     def __init__(self, original_stdout, db_path="data/terminal_output.db"):
         self.original_stdout = original_stdout
         self.db_path = db_path
@@ -41,7 +42,7 @@ class CustomOutput:
         db_dir = os.path.dirname(self.db_path)
         if not os.path.exists(db_dir):
             os.makedirs(db_dir)
-        
+
         # Connect to the database and ensure the table exists
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
@@ -68,13 +69,13 @@ class CustomOutput:
         """Insert the log message into the SQLite database."""
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
-        
+
         # Insert the message into the logs table with the current timestamp
         c.execute('''
             INSERT INTO terminal_logs (log_line)
             VALUES (?)
         ''', (message,))
-        
+
         conn.commit()
         conn.close()
 
@@ -86,7 +87,11 @@ class CustomOutput:
         """Return whether the original stdout is a TTY."""
         return self.original_stdout.isatty()
 
+    def fileno(self):
+        return self.original_stdout.fileno()
+
 # Replace sys.stdout with CustomOutput
+# Wait, why?! Gonna make it at least properly subclass io.TextIOBase
 sys.stdout = CustomOutput(sys.stdout)
 
 def log(message, file_path):
@@ -139,8 +144,9 @@ def version_check(program_version):
 
 def main():
     """Main function to run the script."""
-    if platform.system() != 'Linux':
-        print("This tool is designed only for Linux")
+    system_platform = platform.system()
+    if system_platform.lower() != 'linux':
+        print(f"This tool is designed only for Linux. You are on {system_platform}")
         exit(1)
 
     # Load configuration
@@ -149,6 +155,7 @@ def main():
     TEMPLATE_PATH = Path(config.get('Paths', 'TEMPLATE_PATH'))
     upload_log_path = Path(config.get('Paths', 'UPLOADLOG'))
     cleanup_enabled = config.getboolean('Settings', 'CLEANUP')
+    hasher = config.get('Torrent', 'HASHER').strip()
     program_version = "1.1.0"
 
     try:
@@ -184,6 +191,11 @@ def main():
         if not directory.exists():
             log(f"The provided directory does not exist: {directory}", log_file_path)
             print(f"{bcolors.ENDC}{bcolors.FAIL}Directory does not exist: {directory}\n{bcolors.ENDC}")
+            fail_exit(TMP_DIR, cleanup_enabled)
+
+        if hasher != 'torf' and hasher != 'mkbrr':
+            log(f"Unknown hasher: {hasher}", log_file_path)
+            print(f"{bcolors.ENDC}{bcolors.FAIL}Unknown hasher: {hasher}\n{bcolors.ENDC}")
             fail_exit(TMP_DIR, cleanup_enabled)
 
         update_status(directory, 'uploading')
@@ -427,10 +439,11 @@ def main():
             upload_details['etor_started'] = time.strftime('%a %b %d %H:%M:%S %Z %Y')
 
             # Capture both torrent_file and piece_size from create_torrent
-            torrent_file, piece_size = create_torrent(directory, temp_dir)
+            torrent_file, piece_size = create_torrent(directory, temp_dir,
+                                                      config.getboolean('Torrent', 'EDIT_TORRENT'), hasher)
 
             if torrent_file is None:
-                raise Exception("Failed to create torrent file.")
+                raise RuntimeError("Failed to create torrent file.")
 
             upload_details['torrent_file'] = torrent_file
             upload_details['piece_size'] = piece_size
