@@ -21,8 +21,8 @@ def generate_mediainfo(directory, tmp_dir):
         print("\033[91mNo media files found.\033[0m")  # Red text for no files found
     
     for media_file in media_files:
+        print(f"Processing file: {media_file}\n")
         try:
-            print(f"Processing file: {media_file}\n")
             # Run mediainfo command and capture output
             result = subprocess.run(
                 ['mediainfo', str(media_file)],
@@ -30,6 +30,12 @@ def generate_mediainfo(directory, tmp_dir):
                 capture_output=True,
                 check=True
             )
+        except subprocess.CalledProcessError as e:
+            # Handle errors in running mediainfo
+            print(f"\033[91mError getting media info for {media_file}: {e}\033[0m")  # Red text for errors
+            # Reset mediainfo_output for next run
+            mediainfo_output = ''
+        else:
             """ Stored for quick undo. For now, just use one file's media info.
             file_info = result.stdout
             # Remove lines containing "Complete name:" with any amount of space or tab before the colon
@@ -40,13 +46,9 @@ def generate_mediainfo(directory, tmp_dir):
             mediainfo_output = result.stdout
             # Remove lines containing "Complete name:" with any amount of space or tab before the colon
             mediainfo_output = "\n".join(line for line in mediainfo_output.splitlines()
-                                  if not re.match(r'\s*Complete name\s*:', line))
+                                         if not re.match(r'\s*Complete name\s*:', line))
+            # Can only get here if mediainfo was successful. So, break.
             break
-        except subprocess.CalledProcessError as e:
-            # Handle errors in running mediainfo
-            print(f"\033[91mError getting media info for {media_file}: {e}\033[0m")  # Red text for errors
-            # Reset mediainfo_output for next run
-            mediainfo_output = None
 
     # Save mediainfo output to a file in the tmp_dir
     mediainfo_file_path = None
