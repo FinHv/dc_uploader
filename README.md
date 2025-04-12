@@ -179,7 +179,7 @@ To remove rar2fs:
 
 `rm /usr/local/bin/rar2fs`
 
-Any installed repo's besides the standard apt repo's, which should be just mtn, are stored in `/etc/apt/sources.list.d`, with their gpg keys stored in `/etc/apt/trusted.gpg.d`
+Any installed repo's besides the standard apt repo's, which should be just mtn and mediainfo, are stored in `/etc/apt/sources.list.d`, with their gpg keys stored in `/etc/apt/trusted.gpg.d`
 
 ## FAQ
 
