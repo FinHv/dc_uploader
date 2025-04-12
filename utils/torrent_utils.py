@@ -419,9 +419,12 @@ def upload_torrent(torrent_file, template_file, cookies, category_id, imdb_id, m
             'frileech': int(f"{config.get('UploadForm', 'FREELEECH')}"),
             'anonymousUpload': int(f"{config.get('UploadForm', 'ANONYMOUS')}"),
             'p2p': 0,
-            'nfo': nfo_content,
-            'mediainfo': mediainfo_text,
+            'nfo': nfo_content
         }
+
+        if len(mediainfo_text) > 0:
+            # Add in mediainfo if there is any
+            data['mediainfo'] = mediainfo_text
         
         # Log request details for debugging
         log_to_file(os.path.join(TMP_DIR, 'upload_request.log'), f"Uploading to URL: {upload_url}")

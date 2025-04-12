@@ -304,10 +304,7 @@ def main():
             print(ascii_art_header("Screenshots"))
             if category_id in screenshot_categories:
                 try:
-                    if rar2fs_screenshots_enabled and category_id in rar2fs_categories:
-                        generate_screenshots(directory, category_id)
-                    else:
-                        generate_screenshots(directory, category_id)
+                    generate_screenshots(directory, category_id)
                 except Exception as e:
                     log(f"Error generating screenshots: {str(e)}", log_file_path)
                     fail_exit(TMP_DIR, cleanup_enabled)
@@ -593,7 +590,7 @@ def main():
         # Cleanup on keyboard interrupt
         print(f"\nKeyboard interrupt detected. Cleaning up and exiting...")
         fail_exit(TMP_DIR, cleanup_enabled)
-    else:
+    finally:
         cleanup_tmp_dir(TMP_DIR, cleanup_enabled)
 
 if __name__ == "__main__":

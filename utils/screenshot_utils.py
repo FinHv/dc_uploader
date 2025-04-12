@@ -64,41 +64,37 @@ def generate_screenshots(directory, category_id):
 
 def process_media_files(directory, command_opts, screenshots_dir, is_rar2fs=False):
     """Process movie files to generate screenshots using MTN."""
-    valid_movie_extension = ['*.mp4', '*.mkv', '*.avi', '*.mov', '*.flv', '*.wmv', '*.mpg', '*.m2ts', '*.vob']
+    valid_media_ext = ['*.mp4', '*.mkv', '*.avi', '*.mov', '*.flv', '*.wmv', '*.mpg', '*.m2ts', '*.vob']
     media_files = []
-    root_files = []
     screenshots_generated = False
     
     print(f"{bcolors.YELLOW}Creating screenshots\n{bcolors.ENDC}")
-    
-    # Collect movie files in the root of the directory
-    for ext in valid_movie_extension:
-        root_files.extend(Path(directory).glob(ext))
-    
-    # Determine if there are any movie files in the root directory
-    has_root_movie = len(root_files) > 0
 
     # Collect all movie files recursively
-    for ext in valid_movie_extension:
+    for ext in valid_media_ext:
         media_files.extend(Path(directory).rglob(ext))
     
     if not media_files:
         print(f"{bcolors.FAIL}No media files found.{bcolors.ENDC}")  # Red text for no files found
         return
+    else:
+        # Sort it so it's alphabetical
+        media_files = sorted(media_files)
+        # Log the number of media files found
+        print(f"Found {len(media_files)} media files, attempting screenshots.")
 
-    # Log the number of media files found
-    print(f"Found {len(media_files)} media files.")
+    not_sample_media = []
 
-    for media_file in media_files:
-        # Determine if we should skip this file based on the sample folder logic
-        skip_file = False
-        if has_root_movie and not is_rar2fs:
-            if re.search(r'[Ss][Aa][Mm][Pp][Ll][Ee]', str(media_file)):
-                skip_file = True
-        if skip_file:
-            print(f"{bcolors.YELLOW}Skipping sample file: {media_file}{bcolors.ENDC}")
-            continue
+    for item in media_files:
+        name = str(item)
+        # Create a list of actual media vs sample folders via folder name. Searches for 'sample', case-insensitive
+        if not is_rar2fs and 'sample' in name.lower():
+            print(f"{bcolors.YELLOW}Skipping sample file: {item}{bcolors.ENDC}")
+        else:
+            # Add it to the list of actual media
+            not_sample_media.append(item)
 
+    for media_file in not_sample_media:
         print(f"Processing {media_file}")
         # Run MTN to generate screenshots
         screenshots_generated = mtn_exec(command_opts, media_file, [config.get('MediaTools', 'MTNBIN')],
@@ -110,21 +106,24 @@ def process_media_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
                 # Still can't generate screenshots
                 print(f"No screenshots generated for {media_file} with fallback mtn binary. Possibly broken media file")
             else:
-                # We successfully got screenshots with fallback, break out of the loop
-                break
+                # We successfully got screenshots with fallback, return
+                return
         else:
-            # We successfully got screenshots, break out of the loop
-            break
+            # We successfully got screenshots with fallback, return
+            return
 
-    # If no screenshots were generated, and it's not a RAR2FS mount, check sample directories
+    # If no screenshots were generated, and it's not a RAR2FS mount, check sample directories, if any
     if not screenshots_generated and not is_rar2fs:
-        print(f"{bcolors.YELLOW}No screenshots generated from mounted files. Checking sample directories...{bcolors.ENDC}")
+        print(f"{bcolors.YELLOW}No screenshots generated. Checking sample directories...{bcolors.ENDC}")
         # Process movie files in sample directories if no screenshots were generated
-        sample_dirs = [d for d in Path(directory).rglob('*[Ss][Aa][Mm][Pp][Ll][Ee]*') if d.is_dir()]
+        sample_dirs = [
+            d for d in Path(directory).rglob('*')
+            if d.is_dir() and 'sample' in d.name.lower()
+        ]
         if sample_dirs:
             print(f"Found sample directories: {sample_dirs}")
-        for sample_dir in sample_dirs:
-            process_media_files(sample_dir, command_opts, screenshots_dir, is_rar2fs=False)
+            for sample_dir in sample_dirs:
+                process_media_files(sample_dir, command_opts, screenshots_dir, is_rar2fs=False)
 
 
 def mtn_exec(command_opts, media_file, mtn_path, screenshots_dir):
