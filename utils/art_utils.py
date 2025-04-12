@@ -163,14 +163,9 @@ def ascii_art_header(section_name, program_version = None):
 -----------------------------------------------------------------------------
 """
     }
-
-    # Clear the terminal screen and set text color for Header
-    if section_name == "Header":
-        #os.system('cls' if os.name == 'nt' else 'clear')
-        print("\033[1;34m")  # Blue color
-
-    # Set color for other sections
+    # Set color for sections
     section_colors = {
+        "Header": "\033[1;34m", # Blue
         "Login": "\033[1;32m",  # Green
         "Dupe checking": "\033[1;33m",  # Yellow
         "Create Torrent": "\033[1;35m",  # Magenta
@@ -185,7 +180,6 @@ def ascii_art_header(section_name, program_version = None):
     }
 
     if section_name in section_colors:
-        print(section_colors[section_name])
-
-    # Return the header if found, otherwise return the section name
-    return headers.get(section_name, section_name)
+        print(section_colors[section_name] + headers.get(section_name) + '\033[0m\n')
+    else:
+        print(headers.get(section_name) + '\033[0m')

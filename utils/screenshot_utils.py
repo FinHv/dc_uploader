@@ -138,7 +138,7 @@ def mtn_exec(command_opts, media_file, mtn_path, screenshots_dir):
         # Debug
         # print(f"Command output: {result.stdout}")
         # print(f"Command error: {result.stderr}")
-        if result != 0:
+        if result.returncode != 0:
             print(f"Failed to generate screenshots for {media_file}.")
             return False
 

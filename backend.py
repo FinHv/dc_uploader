@@ -4,6 +4,7 @@ import re
 import shutil
 import sqlite3
 import sys
+import time
 from pathlib import Path
 
 import requests
@@ -171,11 +172,11 @@ def main():
             log("No directory name provided.", log_file_path)
             fail_exit(TMP_DIR, cleanup_enabled)
 
-        print(ascii_art_header("Header", program_version) + bcolors.ENDC)
-        from time import sleep
+        ascii_art_header("Header", program_version)
         version_check(program_version)
-        sleep(3) # Sleep 3 seconds so users can see our pretty header :)
-        print(f"{bcolors.OKBLUE}Starting upload script...\n{bcolors.ENDC}")
+        time.sleep(3) # Sleep 3 seconds so users can see our pretty header :)
+
+        print(f"\n{bcolors.OKBLUE}Starting upload script...{bcolors.ENDC}")
 
         base_dir = Path(config.get('Paths', 'DATADIR'))
         directory = base_dir / directory_name
@@ -233,7 +234,7 @@ def main():
         print(f"{bcolors.RED}################ Settings ################{bcolors.ENDC}")
         print()
 
-        print(ascii_art_header("Login"))
+        ascii_art_header("Login")
         print(f"{bcolors.ENDC}{bcolors.YELLOW}Logging in...\n{bcolors.ENDC}")
         # Login and get cookies
         try:
@@ -268,7 +269,7 @@ def main():
 
             # Only run dupe check if both DUPECHECK and DUPEDL are enabled
             if dupe_check_enabled and dupe_dl_enabled:
-                print(ascii_art_header("Dupe checking"))
+                ascii_art_header("Dupe checking")
                 duplicate_found = check_and_download_dupe(directory_name, cookies)
                 if duplicate_found:
                     log("Duplicate found. Skipping further operations.", log_file_path)
@@ -285,7 +286,7 @@ def main():
             cleanup_tmp_dir(TMP_DIR, cleanup_enabled)  # Clean up TMP_DIR
             exit(1)
 
-        print(ascii_art_header("Category"))
+        ascii_art_header("Category")
 
         # Determine the category of the torrent
         category_name, category_id_str = determine_category(directory_name)
@@ -298,7 +299,7 @@ def main():
         replacements = {'!version!': program_version}
         ### Screenshots processing section
         if screenshots_enabled:
-            print(ascii_art_header("Screenshots"))
+            ascii_art_header("Screenshots")
             if category_id in screenshot_categories:
                 try:
                     generate_screenshots(directory, category_id)
@@ -313,7 +314,7 @@ def main():
         # Mediainfo processing
         mediainfo_content = ''
         if mediainfo_enabled:
-            print(ascii_art_header("Mediainfo"))
+            ascii_art_header("Mediainfo")
             if category_id in mediainfo_categories:
                 try:
                     mediainfo_file_path = generate_mediainfo(directory, temp_dir)
@@ -328,7 +329,7 @@ def main():
         imdb_id = ''
         imdb_link = ''
         if imdb_enabled:
-            print(ascii_art_header("IMDB"))
+            ascii_art_header("IMDB")
             print(f"{bcolors.YELLOW}Find IMDB data\n{bcolors.ENDC}")
             if category_id in imdb_movie_categories or category_id in imdb_tv_categories:
                 # Attempt to extract IMDb link from .nfo file
@@ -370,7 +371,7 @@ def main():
 
         # Game information processing
         if gameinfo_enabled and category_id in game_categories:
-            print(ascii_art_header("Gameinfo"))
+            ascii_art_header("Gameinfo")
             print(f"{bcolors.YELLOW}Fetching game information...\n{bcolors.ENDC}")
             try:
                 # Use the correct function for extracting the game name from the release name or directory
@@ -420,7 +421,7 @@ def main():
             replacements['!gameinfo!'] = ''
 
         ### Torrent creation section
-        print(ascii_art_header("Create Torrent"))
+        ascii_art_header("Create Torrent")
         # Create a torrent file and store it in the process-specific directory
         try:
             upload_details['etor_started'] = time.strftime('%a %b %d %H:%M:%S %Z %Y')
@@ -441,7 +442,7 @@ def main():
             fail_exit(TMP_DIR, cleanup_enabled)
 
         # Image upload processing
-        print(ascii_art_header("UploadImages"))
+        ascii_art_header("UploadImages")
         if image_upload_enabled:
             print(f"{bcolors.YELLOW}Uploading images...\n{bcolors.ENDC}")
             try:
@@ -511,7 +512,7 @@ def main():
                 print(f"{bcolors.RED}Error uploading images: {str(e)}{bcolors.ENDC}")  # Print error message
 
         # Process .nfo file
-        print(ascii_art_header("NFO"))
+        ascii_art_header("NFO")
         print(f"{bcolors.YELLOW}\nFinding NFO data...\n{bcolors.ENDC}")
         try:
             process_nfo(directory, replacements, log_file_path)
@@ -548,10 +549,8 @@ def main():
         except Exception as e:
             log(f"Error preparing template: {str(e)}", log_file_path)
 
-        #time.sleep(3)
-
         # Upload the torrent
-        print(ascii_art_header("Uploading"))
+        ascii_art_header("Uploading")
 
         # Print and log variables before upload
         print(f"{bcolors.YELLOW}Uploading torrent...\n{bcolors.ENDC}")
