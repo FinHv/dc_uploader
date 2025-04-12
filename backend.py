@@ -281,9 +281,8 @@ def main():
         upload_details['category'] = f"{category_name} ({category_id})"
         update_upload_status(name=directory_name, new_status='uploading', size=f'{upload_details["size"]}', category=f'{category_name}')
 
-        # Initialize replacements dictionary
-        replacements = {}
-
+        # Initialize replacements dictionary with version info.
+        replacements = {'!version!': config.get('Header', 'VERSION')}
         ### Screenshots processing section
         if screenshots_enabled:
             print(ascii_art_header("Screenshots"))
@@ -308,18 +307,12 @@ def main():
             if category_id in mediainfo_categories:
                 try:
                     mediainfo_file_path = generate_mediainfo(directory, temp_dir)
+                except Exception as e:
+                    log(f"Error generating mediainfo: {str(e)}", log_file_path)
+                else:
                     if mediainfo_file_path.exists():
                         with open(mediainfo_file_path, 'r') as file:
                             mediainfo_content = file.read()
-                        # Insert mediainfo content into the template replacements
-                        replacements['!mediainfo!'] = mediainfo_content
-                    else:
-                        replacements['!mediainfo!'] = ''
-                except Exception as e:
-                    log(f"Error generating mediainfo: {str(e)}", log_file_path)
-                    replacements['!mediainfo!'] = ''
-            else:
-                replacements['!mediainfo!'] = ''
 
         # IMDb processing
         imdb_id = ''
@@ -521,7 +514,7 @@ def main():
        # Prepare and save the final template with all content
         try:
             output_template_path = os.path.join(TMP_DIR, 'output_template.txt')
-            prepare_template(TEMPLATE_PATH, output_template_path, replacements)
+            prepare_template(str(TEMPLATE_PATH), output_template_path, replacements)
 
             # Read the template content after replacements
             with open(output_template_path, 'r', encoding='utf-8') as file:
@@ -531,7 +524,7 @@ def main():
             template_content = "\n".join([line for line in template_content.splitlines() if line.strip()])
 
             # Remove empty BBCode tags (e.g., [tag][/tag], [tag][tag2][/tag2][/tag])
-            template_content = re.sub(r'\[([a-zA-Z0-9]+)\]\s*\[\/\1\]', '', template_content)
+            template_content = re.sub(r'\[([a-zA-Z0-9]+)]\s*\[/\1]', '', template_content)
 
             # Save the cleaned content back to the file
             with open(output_template_path, 'w', encoding='utf-8') as file:
