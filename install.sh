@@ -120,6 +120,9 @@ if [ "$server_name" != "$HOSTNAME" ]; then
     fi
 fi
 
+wget https://mediaarea.net/repo/deb/repo-mediaarea_1.0-25_all.deb
+dpkg -i repo-mediaarea_1.0-25_all.deb
+rm repo-mediaarea_1.0-25_all.deb
 apt update
 
 # If mtn isn't already installed, add it.
