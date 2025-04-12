@@ -379,10 +379,6 @@ def download_duplicate_torrent(url, cookies, release_name, is_dupe=False, dupe_i
         log_to_file(os.path.join(TMP_DIR, 'dupe_general_error.log' if is_dupe else 'torrent_general_error.log'), f"An error occurred: {str(e)}")
         print(f"\033[91mAn error occurred: {str(e)}\033[0m")
 
-
-
-
-
 def upload_torrent(torrent_file, template_file, cookies, category_id, imdb_id, mediainfo_text):
     """
     Uploads a torrent file to the specified site with the required details.
