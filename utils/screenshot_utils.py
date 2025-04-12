@@ -48,20 +48,20 @@ def generate_screenshots(directory, category_id):
                     # Mount RAR file using rar2fs
                     subprocess.run(['rar2fs', '-o', 'allow_other', '--seek-length=1', str(rar_file), str(mount_point)], check=True)
                     # Process movie files
-                    process_movie_files(mount_point, command_opts, screenshots_dir)
+                    process_media_files(mount_point, command_opts, screenshots_dir)
                 finally:
                     # Clean up mount point
                     subprocess.run(['fusermount', '-u', str(mount_point)], check=True)
                     mount_point.rmdir()
         else:
             # Process movie files directly if no RAR files found
-            process_movie_files(directory, command_opts, screenshots_dir)
+            process_media_files(directory, command_opts, screenshots_dir)
     else:
         # Process movie files directly if RAR2FS is not enabled
-        process_movie_files(directory, command_opts, screenshots_dir)
+        process_media_files(directory, command_opts, screenshots_dir)
     
 
-def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=False):
+def process_media_files(directory, command_opts, screenshots_dir, is_rar2fs=False):
     """Process movie files to generate screenshots using MTN."""
     valid_movie_extension = ['*.mp4', '*.mkv', '*.avi', '*.mov', '*.flv', '*.wmv', '*.mpg', '*.m2ts', '*.vob']
     media_files = []
@@ -98,26 +98,22 @@ def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
             print(f"\033[33mSkipping sample file: {media_file}\033[0m")
             continue
 
-        print(f"Processing file: {media_file}")
-        try:
-            # Run MTN to generate screenshots
-            screenshots_generated = mtn_exec(command_opts, media_file, [config.get('MediaTools', 'MTNBIN')], screenshots_dir)
+        print(f"Processing {media_file}")
+        # Run MTN to generate screenshots
+        screenshots_generated = mtn_exec(command_opts, media_file, [config.get('MediaTools', 'MTNBIN')],
+                                         screenshots_dir)
+        if not screenshots_generated:
+            print("Trying again with fallback mtn binary")
+            screenshots_generated = mtn_exec(command_opts, media_file, 'bin/mtn/mtn', screenshots_dir)
             if not screenshots_generated:
-                print(f"Trying again with fallback mtn binary")
-                screenshots_generated = mtn_exec(command_opts, media_file, 'bin/mtn/mtn-fallback', screenshots_dir)
-                if not screenshots_generated:
-                    # Still can't generate screenshots
-                    print(f"No screenshots generated for {media_file} with fallback mtn binary. Possibly broken media file")
-                else:
-                    # We successfully got screenshots, break out of the loop
-                    break
+                # Still can't generate screenshots
+                print(f"No screenshots generated for {media_file} with fallback mtn binary. Possibly broken media file")
             else:
-                # We successfully got screenshots, break out of the loop
+                # We successfully got screenshots with fallback, break out of the loop
                 break
-        except subprocess.CalledProcessError as e:
-            print(f"\033[91mError creating screenshots for {media_file}: {e}\033[0m")  # Red text for errors
-        except Exception as e:
-            print(f"\033[91mUnexpected error for {media_file}: {e}\033[0m")  # Red text for unexpected errors
+        else:
+            # We successfully got screenshots, break out of the loop
+            break
 
     # If no screenshots were generated, and it's not a RAR2FS mount, check sample directories
     if not screenshots_generated and not is_rar2fs:
@@ -127,26 +123,32 @@ def process_movie_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
         if sample_dirs:
             print(f"Found sample directories: {sample_dirs}")
         for sample_dir in sample_dirs:
-            process_movie_files(sample_dir, command_opts, screenshots_dir, is_rar2fs=False)
+            process_media_files(sample_dir, command_opts, screenshots_dir, is_rar2fs=False)
 
 
 def mtn_exec(command_opts, media_file, mtn_path, screenshots_dir):
     command = mtn_path + command_opts.split() + [str(media_file), '-o', '.jpg', '-O', str(screenshots_dir)]
     print(f"Running command: {' '.join(command)}")
-    result = subprocess.run(command, capture_output=True, text=True)
-    # Debug
-    # print(f"Command output: {result.stdout}")
-    # print(f"Command error: {result.stderr}")
-    if result != 0:
-        print(f"Failed to generate screenshots for {media_file}.")
-        return False
-
-    # Check if any screenshot files are created
-    screenshot_files = list(screenshots_dir.glob(f"{media_file.stem}*.jpg"))
-    if screenshot_files:
-        print(f"Successfully generated screenshots")
-        print(f"Generated screenshots: {screenshot_files}")
-        return True
+    try:
+        result = subprocess.run(command, capture_output=True, text=True)
+    except subprocess.CalledProcessError as e:
+        print(f"\033[91mError creating screenshots for {media_file}: {e}\033[0m")  # Red text for errors
+    except Exception as e:
+        print(f"\033[91mUnexpected error for {media_file}: {e}\033[0m")  # Red text for unexpected errors
     else:
-        print(f"No screenshots generated for {media_file}.")
-        return False
+        # Debug
+        # print(f"Command output: {result.stdout}")
+        # print(f"Command error: {result.stderr}")
+        if result != 0:
+            print(f"Failed to generate screenshots for {media_file}.")
+            return False
+
+        # Check if any screenshot files are created
+        screenshot_files = list(screenshots_dir.glob(f"{media_file.stem}*.jpg"))
+        if screenshot_files:
+            print(f"Successfully generated screenshots")
+            print(f"Generated screenshots: {screenshot_files}")
+            return True
+        else:
+            print(f"No screenshots generated for {media_file}.")
+            return False
