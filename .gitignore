@@ -1,3 +1,5 @@
+# Project wide .gitignore
+
 # Created by https://www.toptal.com/developers/gitignore/api/linux,pycharm,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,pycharm,python
 
@@ -314,6 +316,7 @@ pyrightconfig.json
 # End of https://www.toptal.com/developers/gitignore/api/linux,pycharm,python
 /venv.path
 /data/
+/utils/__pycache__/
 
 # Don't add certificates to git, should be pretty obvious why
 *.pem
