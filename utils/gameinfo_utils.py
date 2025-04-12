@@ -1,7 +1,8 @@
 import os
 import re
-from pathlib import Path
 from datetime import datetime, UTC
+from pathlib import Path
+
 import requests
 
 from utils.config_loader import ConfigLoader

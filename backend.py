@@ -27,7 +27,6 @@ from utils.screenshot_utils import generate_screenshots
 from utils.status_utils import update_status
 from utils.template_utils import prepare_template
 from utils.torrent_utils import create_torrent, upload_torrent
-from utils.bcolors import bcolors
 
 
 class CustomOutput:
