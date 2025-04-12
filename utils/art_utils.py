@@ -28,6 +28,7 @@ def ascii_art_header(section_name, program_version = None):
                         | |                                  
                         |_|                                  
 						 by R4bb1t & UnpooledUnit v{program_version}
+						 
  {text}                             config.ini date: {date}
 -----------------------------------------------------------------------------
         """,
