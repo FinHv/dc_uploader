@@ -1,31 +1,13 @@
 import argparse
-from pathlib import Path
-import requests
-import re
 import os
-import time
-import shutil
-import sqlite3
-from datetime import datetime
+import re
+from datetime import datetime, UTC
 from pathlib import Path
-from utils.status_utils import create_status_folder, remove_status_folder, update_status
+
+import requests
+
 from utils.config_loader import ConfigLoader
-from utils.torrent_utils import create_torrent, upload_torrent, download_duplicate_torrent
-from utils.directory_utils import create_process_directory
-from utils.logging_utils import log_to_file, log_upload_details
-from utils.dupe_utils import check_and_download_dupe
-from utils.login_utils import login
-from utils.category_utils import determine_category
-from utils.screenshot_utils import generate_screenshots
-from utils.template_utils import prepare_template
-from utils.mediainfo_utils import generate_mediainfo
-from utils.filters_utils import load_filters_with_path
-from utils.imdb_utils import get_imdb_info, extract_imdb_link_from_nfo, extract_movie_details, extract_tv_show_details, get_imdb_tv_info
-from utils.image_utils import upload_images
-from utils.nfo_utils import process_nfo
-from utils.art_utils import ascii_art_header
-from utils.database_utils import insert_upload, update_upload_status
-from utils.gameinfo_utils import fetch_game_info, extract_game_name
+from utils.logging_utils import log_to_file
 
 # Load configuration
 config = ConfigLoader().get_config()
@@ -118,7 +100,12 @@ def fetch_game_info(game_name, releasedir):
 
             # Convert the release date from Unix time to a readable format
             release_date_unix = game.get('first_release_date', '')
-            release_date = datetime.utcfromtimestamp(release_date_unix).strftime('%d %B %Y') if release_date_unix else 'Unknown'
+            release_date = (
+                datetime.fromtimestamp(release_date_unix, UTC)
+                .strftime('%d %B %Y')
+                if release_date_unix
+                else 'Unknown'
+            )
 
             # Function to replace the default image size in the URL with `t_720p` and add https if missing
             def fix_url(url):

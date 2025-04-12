@@ -1,5 +1,5 @@
 import os
-import time
+
 
 def get_folder_timestamps(folder_path):
     """Retrieve the folder's access and modification times."""

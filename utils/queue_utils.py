@@ -1,7 +1,7 @@
 import sqlite3
-import psutil
 import time
-import os
+
+import psutil
 
 DB_PATH = 'data/upload_queue.db'
 

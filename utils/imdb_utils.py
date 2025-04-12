@@ -1,9 +1,11 @@
-import requests
 import json
+import os
 import re
 from pathlib import Path
+
+import requests
+
 from utils.config_loader import ConfigLoader
-import os
 
 # Load configuration
 config = ConfigLoader().get_config()
@@ -191,9 +193,9 @@ def extract_movie_details(directory_name):
     #print(f"Extracting movie details from directory name: {directory_name}")
     
     # Attempt to match patterns like "Title (Year)" or "Title.Year"
-    match = re.match(r'(.+?)[\s\.]*\((\d{4})\)', directory_name)
+    match = re.match(r'(.+?)[\s.]*\((\d{4})\)', directory_name)
     if not match:
-        match = re.match(r'(.+?)[\s\.]*(\d{4})', directory_name)
+        match = re.match(r'(.+?)[\s.]*(\d{4})', directory_name)
     
     if match:
         title, year = match.groups()

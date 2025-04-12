@@ -1,6 +1,9 @@
 import os
+
 import rfr
+
 from utils.art_utils import ascii_art_header
+
 
 def add_fastresume(torrent_file, download_dir, output_file):
     """Add fast resume to the torrent using the rfr Python module."""

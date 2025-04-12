@@ -1,10 +1,12 @@
-import os
-import requests
 import json
+import os
 import shutil
+
+import requests
+
 from utils.config_loader import ConfigLoader
 from utils.logging_utils import log_to_file
-from utils.torrent_utils import create_torrent, upload_torrent, download_duplicate_torrent
+from utils.torrent_utils import download_duplicate_torrent
 
 # Load configuration
 config = ConfigLoader().get_config()

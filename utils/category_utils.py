@@ -1,7 +1,9 @@
 import os
 import re
-from .filters_utils import load_filters
 from configparser import ConfigParser
+
+from .filters_utils import load_filters
+
 
 def load_config(config_file='config.ini'):
     """Load the configuration from the specified file."""

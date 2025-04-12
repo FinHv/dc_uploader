@@ -1,6 +1,7 @@
+import re
 import subprocess
 from pathlib import Path
-import re
+
 
 def generate_mediainfo(directory, tmp_dir):
     """Generate media info for movie files in the given directory using the mediainfo executable, and save to a file in tmp_dir."""

@@ -1,9 +1,10 @@
 import os
+import subprocess
 from pathlib import Path
 from tempfile import NamedTemporaryFile
-import subprocess
-from utils.logging_utils import log_to_file
+
 from utils.config_loader import ConfigLoader
+from utils.logging_utils import log_to_file
 
 # Load configuration
 config = ConfigLoader().get_config()

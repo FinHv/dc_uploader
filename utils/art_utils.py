@@ -1,4 +1,3 @@
-import os
 from utils.config_loader import ConfigLoader
 
 # Load configuration settings

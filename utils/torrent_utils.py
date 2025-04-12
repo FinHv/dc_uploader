@@ -1,19 +1,20 @@
+import configparser
 import os
 import platform
+import re
 import shlex
+import shutil
 import subprocess
-
-import requests
+import time
 from pathlib import Path
-from utils.logging_utils import log_to_file
+
+import cli_ui
+import requests
+from torf import Torrent, ReadError, BdecodeError, MetainfoError
+
 from utils.config_loader import ConfigLoader
 from utils.fastresume_utils import add_fastresume
-from torf import Torrent, ReadError, BdecodeError, MetainfoError
-import re
-import time
-import configparser
-import shutil
-import cli_ui
+from utils.logging_utils import log_to_file
 
 # Load configuration
 config = ConfigLoader().get_config()

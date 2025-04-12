@@ -1,8 +1,10 @@
-import requests
 import os
 import pickle
 import warnings
 from pathlib import Path
+
+import requests
+
 from utils.config_loader import ConfigLoader
 from utils.logging_utils import log_to_file
 

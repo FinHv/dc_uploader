@@ -1,6 +1,6 @@
 import sqlite3
-from datetime import datetime
 import sys
+from datetime import datetime
 from pathlib import Path
 
 UPLOADS_DB = 'data/uploads.db'

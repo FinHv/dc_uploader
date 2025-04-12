@@ -1,8 +1,9 @@
+import json
 import os
 import re
-import json
 import sys
 from configparser import ConfigParser
+
 
 def load_config(config_file='config.ini'):
     """Load the configuration from the specified file."""

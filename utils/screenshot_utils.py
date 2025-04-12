@@ -1,10 +1,8 @@
 import os
-import subprocess
-import hashlib
-import json
 import re
-import urllib.parse
+import subprocess
 from pathlib import Path
+
 from utils.config_loader import ConfigLoader
 
 # Load configuration settings
