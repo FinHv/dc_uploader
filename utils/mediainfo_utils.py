@@ -17,14 +17,13 @@ def generate_mediainfo(directory, tmp_dir):
     media_files = []
     for ext in media_extensions:
         found_files = list(Path(directory).rglob(ext))
-        print(f"Found {len(found_files)} files with extension {ext}: {found_files}")
         media_files.extend(found_files)
     
     if not media_files:
         print(f"{bcolors.FAIL}No media files found.{bcolors.ENDC}")  # Red text for no files found
         return
     else:
-        print(f"Found {len(media_files)} media files, attempting to get mediainfo.")
+        print(f"Found {len(media_files)} media files, attempting to get mediainfo from one candidate.")
         # Sort found media files alphabetically
         media_files = sorted(media_files)
 

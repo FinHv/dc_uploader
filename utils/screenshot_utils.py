@@ -80,7 +80,7 @@ def process_media_files(directory, command_opts, screenshots_dir, is_rar2fs=Fals
         # Sort it so it's alphabetical
         media_files = sorted(media_files)
         # Log the number of media files found
-        print(f"Found {len(media_files)} media files, attempting screenshots.")
+        print(f"Found {len(media_files)} media files, attempting to get screenshots from one candidate.")
 
     not_sample_media = []
 
