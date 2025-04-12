@@ -2,11 +2,13 @@ import time
 from pathlib import Path
 
 def log_to_file(log_file_path, message):
-    """Append a log message to the specified log file."""
+    """Append a log message to the specified log file.
+    Args:
+        log_file_path (Path): Path to the log file (as a Path object).
+        message (str): Message to be logged
+    """
     with open(log_file_path, 'a', encoding='utf-8') as log_file:
         log_file.write(f"{message}\n")
-
-
 
 def log_upload_details(upload_details, log_file_path: Path, duplicate_found=False):
     """Log detailed upload information to the upload.log file.
