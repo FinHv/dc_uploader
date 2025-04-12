@@ -108,7 +108,8 @@ cd "$script_path"
 
 if [ -z "$server_name" ]; then
     # Initiate server name to hostname in case user selects N. Needed for handle_reply.
-    read -p "Enter the fully qualified domain name for the self-signed certificate [default: hostname] : " -r
+    read -p "Enter the fully qualified domain name for the self-signed certificate." \
+    "Leave blank for default [default: $HOSTNAME] : " -r
     server_name=${REPLY:-"$HOSTNAME"}
 fi
 
