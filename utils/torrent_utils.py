@@ -10,7 +10,7 @@ from pathlib import Path
 
 import cli_ui
 import requests
-from torf import Torrent, ReadError, BdecodeError, MetainfoError
+from torf import Torrent, ReadError, BdecodeError, MetainfoError, VerifyIsDirectoryError, VerifyFileSizeError
 
 from utils.bcolors import bcolors
 from utils.config_loader import ConfigLoader
@@ -61,16 +61,20 @@ def torf_cb(torrent, filepath, pieces_done, pieces_total):
     # Display progress with percentage, speed, and ETA
     cli_ui.info_progress(f"Torf hashing... {speed_str} | ETA: {eta}", int(percentage_done), 100)
 
-def create_torrent(directory, temp_dir):
-    """Create a torrent file from the given directory using torf-cli."""
+def create_torrent(directory, temp_dir, edit, hasher):
+    """Create a torrent file from the given directory using torf-cli.
+        Args:
+            directory (Path): Path of the directory to generate a torrent for
+            temp_dir (Path): Path to the temp directory to store output
+            edit (bool): If true, edit the torrent file
+            hasher (str): Which hasher to use
+    """
     try:
-        edit_torrent = config.getboolean('Torrent', 'EDIT_TORRENT')
         ecomment = config.get('Torrent', 'ECOMMENT').strip()
         esource = config.get('Torrent', 'ESOURCE').strip()
         creator = config.get('Torrent', 'CREATOR').strip()
         announceurl = config.get('Torrent', 'ANNOUNCEURL').strip()
         etorrentpath = config.get('Torrent', 'SOURCEFOLDER').strip().rstrip('/')
-        hasher = config.get('Torrent', 'HASHER').strip()
     except (configparser.NoOptionError, configparser.NoSectionError) as e:
         print(f"Config error: {e}")
         return None
@@ -86,14 +90,18 @@ def create_torrent(directory, temp_dir):
         print("SOURCEFOLDER is not configured; not reusing existing torrent. New torrent will be generated.")
         etorrent_file_path = None
 
-    piece_size = calculate_piece_size(directory)
-    max_piece_size_bytes = piece_size * 1024 * 1024
-    if edit_torrent and etorrent_file_path and etorrent_file_path.exists():
+    if edit and etorrent_file_path:
         # Existing torrent successfully found, and torrent reuse is desired
+        #if not etorrent_file_path.exists():
+        #    print("No existing .torrent found. New torrent will be generated.")
+            # Call itself, but set edit to false
+        #    create_torrent(directory, temp_dir, False, hasher)
         try:
             reused_torrent = Torrent.read(f"{shlex.quote(str(etorrent_file_path))}")
         except (ReadError, BdecodeError, MetainfoError):
-            print("No existing .torrent found. New torrent will be generated.")
+            print("Error reading existing torrent. New torrent will be generated.")
+            # Call itself, but set edit to false
+            create_torrent(directory, temp_dir, False, hasher)
         except Exception as e:
             # Catch the rest
             log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
@@ -127,8 +135,10 @@ def create_torrent(directory, temp_dir):
             reused_torrent.private = True
             Torrent.copy(reused_torrent).write(output_torrent, overwrite=True)
     else:
-        try:
-            if hasher == 'torf':
+        piece_size = calculate_piece_size(directory)
+        max_piece_size_bytes = piece_size * 1024 * 1024
+        if hasher == 'torf':
+            try:
                 new_torrent = Torrent(path=str(directory_path),
                                       name=directory_path.name,
                                       trackers=[announceurl],
@@ -138,6 +148,13 @@ def create_torrent(directory, temp_dir):
                                       randomize_infohash=True,
                                       private=True,
                                       piece_size_max=max_piece_size_bytes)
+
+            except Exception as e:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                print(f"{bcolors.FAIL}Error when writing torrent metainfo to Torrent object: {e}")
+                return None, None
+
+            try:
                 if new_torrent.generate(callback=torf_cb, interval=5):
                     new_torrent.write(output_torrent, overwrite=True)
                     log_to_file(temp_dir_path / 'create_torrent_output.log',
@@ -145,91 +162,111 @@ def create_torrent(directory, temp_dir):
                     print("New torrent successfully generated. Validating now")
                     try:
                         Torrent.read(output_torrent).validate()
-                        new_torrent.verify_filesize(directory_path)
-                        log_to_file(temp_dir_path / 'create_torrent_output.log', "Torrent file successfully validated")
-                        print("Torrent file successfully validated")
-                    except Exception as e:
+                    except (ReadError, BdecodeError, MetainfoError) as e:
                         log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
-                        print(f"Error, generated torrent is not valid: {e}")
+                        print(f"Could not read output torrent: {e}")
                         return None, None
+                    try:
+                        validated = new_torrent.verify_filesize(directory_path)
+                    except (ReadError, MetainfoError, VerifyIsDirectoryError, VerifyFileSizeError) as e:
+                        log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                        print(f"Could not verify output torrent: {e}")
+                    else:
+                        if validated:
+                            log_to_file(temp_dir_path / 'create_torrent_output.log',
+                                        "Torrent file successfully validated")
+                            print("Torrent file successfully validated")
+                        else:
+                            log_to_file(temp_dir_path / 'create_torrent_error.log',
+                                        "Failed to hash all pieces during torrent generation")
+                            print("Failed to hash all pieces during torrent generation")
+                            return None, None
                 else:
-                    log_to_file(temp_dir_path / 'create_torrent_error.log', f"Failed to hash all pieces during torrent generation")
-                    print(f"Failed to hash all pieces during torrent generation")
+                    # Failed for whatever reason that wasn't raised as an exception
+                    log_to_file(temp_dir_path / 'create_torrent_error.log', "Failed to hash all pieces during torrent generation")
+                    print("Failed to hash all pieces during torrent generation")
                     return None, None
-            elif hasher == 'mkbrr':
-                platform_type = platform.machine()
-                mkbrr_path = 'bin/mkbrr/linux/'
-                if platform_type == 'amd64':
-                    mkbrr_path += 'amd64/mkbrr'
-                elif platform_type == 'x86_64':
-                    mkbrr_path += 'x86_64/mkbrr'
-                elif platform_type == 'aarch64' or platform_type == 'arm64' or 'armv8' in platform_type:
-                    mkbrr_path += 'arm64/mkbrr'
-                elif "armv6" in platform_type:
-                    mkbrr_path += 'armv6/mkbrr'
-                elif "armv7" in platform_type:
-                    mkbrr_path += 'arm/mkbrr'
-                else:
-                    log_to_file(temp_dir_path / 'create_torrent_error.log',
-                                f"Unsupported platform: {platform_type}")
-                    print(f"Unsupported platform: {platform_type}")
-                    return None, None
+            except Exception as e:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                print(f"{bcolors.FAIL}Error generating torrent: {e}")
+                return None, None
 
-                # Ensure mkbrr is executable for both owner and group
-                os.chmod(mkbrr_path, 0o775)
+        elif hasher == 'mkbrr':
+            try:
+                mkbrr_path = get_mkbrr_bin()
+            except Exception as e:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                print(f"{bcolors.FAIL}Error getting mkbrr binary: {e}")
+                return None, None
 
-                if piece_size < 16:
-                    # Mkbrr only supports a minimum piece length of 16. If it's lower than 16, set to 16.
-                    max_piece_size_bytes = 16 * 1024 * 1024
+            # Ensure mkbrr is executable for both owner and group
+            os.chmod(mkbrr_path, 0o775)
 
-                # Largest power of 2 that's less than or equal to max piece size in bytes
-                import math
-                power = min(27, max(16, math.floor(math.log2(max_piece_size_bytes))))
-                print(
-                    f"[yellow]Setting mkbrr piece length to 2^{power} ({(2 ** power) / (1024 * 1024):.2f} MiB)")
-                cmd = [mkbrr_path,
-                       "create",
-                       f"{shlex.quote(str(directory_path))}",
-                       f'-t {announceurl}',
-                       '-e',
-                       f'-l {str(power)}',
-                       f'-o {output_torrent}',
-                       f'-s {esource}',
-                       f'-c {ecomment}']
+            if piece_size < 16:
+                # Mkbrr only supports a minimum piece length of 16. If it's lower than 16, set to 16.
+                max_piece_size_bytes = 16 * 1024 * 1024
 
+            # Largest power of 2 that's less than or equal to max piece size in bytes
+            import math
+            power = min(27, max(16, math.floor(math.log2(max_piece_size_bytes))))
+            print(
+                f"{bcolors.YELLOW}Setting mkbrr piece length to {(2 ** power) / (1024 * 1024):.2f} MiB{bcolors.ENDC}")
+            cmd = [mkbrr_path,
+                   "create",
+                   str(directory_path),
+                   '-t', f'{announceurl}',
+                   '-e',
+                   '-l', str(power),
+                   '-o', f'{output_torrent}',
+                   '-s', f'{esource}',
+                   '-c', f'{ecomment}']
+
+            try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+            except OSError as e:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                print(f"{bcolors.FAIL}Error starting mkbrr process: {e}")
+                return None, None
 
-                total_pieces = 100  # Default to 100% for scaling progress
-                pieces_done = 0
-                mkbrr_start_time = time.time()
-                torrent_written = False
+            total_pieces = 100  # Default to 100% for scaling progress
+            pieces_done = 0
+            mkbrr_start_time = time.time()
+            torrent_written = False
 
-                from rich.console import Console
-                console = Console()
+            error = "Unknown error" # Initialize error to "Unknown error"
+            try:
                 for line in process.stdout:
                     line = line.strip()
-
+                    if 'error' in line.lower():
+                        error = line
+                        break
                     # Detect hashing progress, speed, and percentage
-                    match = re.search(r"Hashing pieces.*?\[(\d+(?:\.\d+)? (?:MB|MiB)/s)\]\s+(\d+)%", line)
+                    match = re.search(r"Hashing pieces.*?\[(\d+(?:\.\d+)? [GM](?:B|iB)/s)]\s+(\d+)%", line)
                     if match:
                         speed = match.group(1)  # Extract speed (e.g., "12734.21 MB/s")
                         pieces_done = int(match.group(2))  # Extract percentage (e.g., "60")
 
-                        # Estimate ETA (Time Remaining)
-                        elapsed_time = time.time() - mkbrr_start_time
-
-                        if pieces_done > 0:
-                            estimated_total_time = elapsed_time / (pieces_done / 100)
-                            eta_seconds = max(0, estimated_total_time - elapsed_time)
+                        # Try to extract the ETA directly if it's in the format [elapsed:remaining]
+                        eta_match = re.search(r'\[(\d+)s:(\d+)s]', line)
+                        if eta_match:
+                            eta_seconds = int(eta_match.group(2))
                             eta = time.strftime("%M:%S", time.gmtime(eta_seconds))
                         else:
-                            eta = "--:--"  # Placeholder if we can't estimate yet
+                            # Fallback to calculating ETA if not directly available
+                            elapsed_time = time.time() - mkbrr_start_time
+                            if pieces_done > 0:
+                                estimated_total_time = elapsed_time / (pieces_done / 100)
+                                eta_seconds = max(0, estimated_total_time - elapsed_time)
+                                eta = time.strftime("%M:%S", time.gmtime(eta_seconds))
+                            else:
+                                eta = "--:--"  # Placeholder if we can't estimate yet
 
                         cli_ui.info_progress(f"mkbrr hashing... {speed} | ETA: {eta}", pieces_done, total_pieces)
 
                     # Detect final output line
                     if "Wrote" in line and ".torrent" in line:
-                        console.print(f"[bold cyan]{line}")  # Print the final torrent file creation message
+                        # Print the final torrent file creation message
+                        print(f"{bcolors.BCyan}{line}")
                         torrent_written = True
 
                 # Wait for the process to finish
@@ -237,38 +274,51 @@ def create_torrent(directory, temp_dir):
 
                 # Verify the torrent was actually created
                 if result != 0:
-                    console.print(f"[bold red]mkbrr exited with non-zero status code: {result}")
-                    raise RuntimeError(f"mkbrr exited with status code {result}")
+                    raise RuntimeError(f"mkbrr exited with following error: {error}")
 
                 if not torrent_written or not os.path.exists(output_torrent):
-                    console.print("[bold red]mkbrr did not create a torrent file!")
                     raise FileNotFoundError(f"Expected torrent file {output_torrent} was not created")
-
-                try:
-                    test_torrent = Torrent.read(output_torrent)
-                    if not test_torrent.metainfo.get('info', {}).get('pieces'):
-                        console.print("[bold red]Generated torrent file appears to be invalid (missing pieces)")
-                        raise ValueError("Generated torrent is missing pieces hash")
-                except Exception as e:
-                    log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
-                    print(f"Error creating torrent: {e}")
-                    return None, None
-            else:
-                log_to_file(temp_dir_path / 'create_torrent_error.log',
-                            f"Unknown hasher")
-                print(f"Unknown hasher")
-                return None, None
-        except Exception as e:
+            except Exception as e:
                 log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
-                print(f"Error generating torrent: {e}")
+                print(f"{bcolors.FAIL}Error creating torrent: {e}")
+
+                # Ensure process is termianted to prevent orphaned mkbrr processes
+                process.terminate()
                 return None, None
-    try:
-        print(f"{bcolors.OKGREEN}Torrent to be uploaded has been created: {output_torrent}\n{bcolors.ENDC}")
-        return output_torrent, piece_size  # Return the path to the torrent file as a string
-    except Exception as e:
-        log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
-        print(f"Error creating torrent: {e}")
-        return None, None
+
+            # Validate the torrent file by trying to read it
+            try:
+                test_torrent = Torrent.read(output_torrent)
+                if not test_torrent.metainfo.get('info', {}).get('pieces'):
+                    raise ValueError("Generated torrent is missing pieces")
+            except Exception as e:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                print(f"{bcolors.FAIL}Error creating torrent: {e}")
+                return None, None
+
+    print(f"{bcolors.OKGREEN}Torrent to be uploaded has been created: {output_torrent}\n{bcolors.ENDC}")
+    return output_torrent, piece_size  # Return the path to the torrent file as a string
+
+def get_mkbrr_bin():
+    """Get the path to the mkbrr binary based on the platform."""
+    platform_type = platform.machine().lower()
+    system_platform = platform.system().lower()
+    mkbrr_path = 'bin/mkbrr/'
+    if system_platform == 'linux':
+        mkbrr_path += 'linux/'
+        if 'amd64' in platform_type:
+            mkbrr_path += 'amd64/mkbrr'
+        elif 'x86_64' in platform_type:
+            mkbrr_path += 'x86_64/mkbrr'
+        elif 'aarch64' in platform_type or 'arm64' in platform_type or 'armv8' in platform_type:
+            mkbrr_path += 'arm64/mkbrr'
+        elif "armv6" in platform_type:
+            mkbrr_path += 'armv6/mkbrr'
+        elif "armv7" in platform_type:
+            mkbrr_path += 'arm/mkbrr'
+        else:
+            raise FileNotFoundError(f"Unsupported Linux architecture: {platform_type}")
+    return mkbrr_path
 
 def calculate_size(directory):
     """Calculate the directory size."""
