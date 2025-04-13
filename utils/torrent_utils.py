@@ -98,7 +98,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
         if not etorrent_file_path.exists():
             print("No existing .torrent found. New torrent will be generated.")
             # Call itself, but set edit to false
-            create_torrent(directory, temp_dir, False, hasher)
+            return create_torrent(directory, temp_dir, False, hasher)
 
         # Existing torrent *file* successfully found, try to use it
         try:
@@ -106,7 +106,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
         except (ReadError, BdecodeError, MetainfoError):
             print("Error reading existing torrent. New torrent will be generated.")
             # Call itself, but set edit to false
-            create_torrent(directory, temp_dir, False, hasher)
+            return create_torrent(directory, temp_dir, False, hasher)
         except Exception as e:
             # Catch the rest
             log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
@@ -222,7 +222,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
                    '-t', f'{announceurl}',
                    '-e',
                    '-l', str(power),
-                   '-o', get_root_dir() + f'{output_torrent}',
+                   '-o', get_root_dir() + f'/{output_torrent}',
                    '-s', f'{esource}',
                    '-c', f'{ecomment}']
 
