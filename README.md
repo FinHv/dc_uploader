@@ -116,7 +116,7 @@ Use `queue_upload.sh` exactly the same as you would `upload.sh`, just that inste
 
 The queue file provided to `queue_upload.sh` can either be a full absolute path or a relative path relative to `queue_upload.sh`. e.g. `queue_upload.sh some_queue_file.txt [OPTION]` if queue file is located in the same folder as `queue_upload.sh`.
 
-If you want to see a log of what was successful during the last run, the success/failure of each queue item is logged in `files/queue_upload.log`. This log is overwritten each time `queue_upload.sh` is run.
+If you want to see a log of what was successful during the last run, the success/failure of each queue item is logged in `files/queue_upload.log`.
 
 Since this might take a while, it might be a good idea to execute this as a detached screen. See [FAQ](https://github.com/FinHv/dc_uploader/tree/main?tab=readme-ov-file#faq).
 
@@ -137,7 +137,7 @@ shutdown.sh shuts down the web server and ends the screen session.
 
 If using discrete directories, web app requires users to manually copy/hardlink/symlink/move to DATADIR. Hopefully future versions will automate the copy/hardlink/symlink process when using discrete directory.
 
-You can connect to the screen session with `screen -r dc-uploader`. Detatch from the screen with `CTRL + A` then `D`.
+You can connect to the screen session with `screen -r dc-uploader`. Detatch from the screen with `CTRL + A` then `D`. Logs are stored in files/webapp.log.
 
 ## Discrete directories
 
@@ -191,7 +191,11 @@ A: Luckily, screen is installed by the script! You can simply execute the comman
 
 `screen -dmS [SCREEN_NAME] ./upload.sh /some/directory/ --ln`
 
-etc.
+etc. If you want to log the screen's output into some.log located in the program's files directory, you can do that too:
+
+`screen -dms [SCREEN_NAME] -L -Logfile files/some.log ./queue_upload.sh...`
+
+`screen -dms [SCREEN_NAME] -L -Logfile files/some.log ./upload.sh...`
 
 Essentially, just add `screen -dmS [SCREEN_NAME]` to the start of your command and it'll execute that command in a detached screen. The screen will automatically terminate once the command finishes. You can omit the `S [SCREEN_NAME]` if you don't want to name your screen.
 
@@ -235,6 +239,10 @@ If you already have some command executing, just chain the command:
 #### Q: What happens if I pass the script a file instead of a directory?
 
 A: A polar bear mauls you. Assuming you survive, the script will fail - this tool does not support file uploads. The tool does not create subdirectories within the .torrent file.
+
+#### Q: Will logs grow indefinitely?
+
+For some, yes. However, for the two things that tend to generate a lot of logs, namely the webapp and queue_upload.sh, they are rotated to [somelog].log.old when they reach 2MiB and 1MiB, respectively. Even for the logs that don't have automatic rotation, logs take up very little space, and you can always just manually delete them from the files directory if you want to.
 
 #### Q: What happens if I pass the script the path of something already in DATADIR?
 

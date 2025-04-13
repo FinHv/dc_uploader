@@ -113,15 +113,22 @@ if ! [ -f "$queue_file" ]; then
 fi
 
 # Remove old log file
-log_path="files/queue_upload.log"
-if [ -f "$log_path" ]; then
-    rm "$log_path"
+log_file="files/queue_upload.log"
+
+if [ -f "$log_file" ]; then
+        # Check if the log file size is 1MB or greater
+        max_size=$((1 * 1024 * 1024)) # 1MB in bytes
+        current_size=$(stat -c%s "$log_file")
+        if [ "$current_size" -ge "$max_size" ]; then
+            # Rotate the log file
+            mv "$log_file" "$log_file.old"
+        fi
 fi
 
 while IFS= read -r line; do
     if ./upload.sh "$line" "$ARG"; then
-        echo "Successfully uploaded: $(basename "$line")" >> "$log_path"
+        echo "Successfully uploaded: $(basename "$line")" >> "$log_file"
     else
-        echo "Error when uploading: $(basename "$line")" >> "$log_path"
+        echo "Error when uploading: $(basename "$line")" >> "$log_file"
     fi
 done < "$queue_file"
