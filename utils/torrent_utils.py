@@ -239,12 +239,13 @@ def create_torrent(directory, temp_dir, edit, hasher):
                    '-t', f'{announceurl}',
                    '-e',
                    '-l', str(power),
-                   '-o', get_root_dir() + f'/{output_torrent}',
+                   '-o', get_root_dir() + f'{output_torrent}',
                    '-s', f'{esource}',
                    '-c', f'{ecomment}']
 
             try:
                 process = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, text=True, bufsize=1)
+                print(f"mkbrr PID: {process.pid}")
             except OSError as e:
                 log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
                 print(f"{bcolors.FAIL}Error starting mkbrr process: {e}")
