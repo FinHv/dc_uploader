@@ -10,7 +10,8 @@ from pathlib import Path
 
 import cli_ui
 import requests
-from torf import Torrent, ReadError, BdecodeError, MetainfoError, VerifyIsDirectoryError, VerifyFileSizeError
+from torf import Torrent, ReadError, BdecodeError, MetainfoError, VerifyIsDirectoryError, VerifyFileSizeError, \
+    WriteError
 
 from utils.bcolors import bcolors
 from utils.config_loader import ConfigLoader
@@ -103,17 +104,18 @@ def create_torrent(directory, temp_dir, edit, hasher):
         # Existing torrent *file* successfully found, try to use it
         try:
             reused_torrent = Torrent.read(f"{shlex.quote(str(etorrent_file_path))}")
-        except (ReadError, BdecodeError, MetainfoError):
-            print("Error reading existing torrent. New torrent will be generated.")
+        except MetainfoError as e:
+            print(f"Invalid existing torrent. {e}\n"
+                  f"New torrent will be generated.")
             # Call itself, but set edit to false
             return create_torrent(directory, temp_dir, False, hasher)
         except Exception as e:
-            # Catch the rest
+            # Catch the rest, the only error that is not treated as fatal is MetainfoError
             log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
             print(f"Error reusing torrent: {e}")
             return None, None
         else:
-            print(f"### Found existing torrent. {output_torrent}")
+            print(f"### Found existing torrent. {output_torrent}. Saving an edited copy")
             # Now edit the torrent as an object
             reused_torrent.trackers = [announceurl]
             reused_torrent.comment = ecomment
@@ -138,7 +140,22 @@ def create_torrent(directory, temp_dir, edit, hasher):
 
             reused_torrent.source = f"{shlex.quote(esource)}"
             reused_torrent.private = True
-            Torrent.copy(reused_torrent).write(output_torrent, overwrite=True)
+            try:
+                reused_torrent = Torrent.copy(reused_torrent)
+            except Exception as e:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                print(f"Error when trying to copy torrent: {e}")
+                return None, None
+            try:
+                reused_torrent.write(output_torrent, overwrite=True)
+            except WriteError as e:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                print(f"Error, could not write torrent to {output_torrent}: {e}")
+                return None, None
+            except MetainfoError as e:
+                log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
+                print(f"Error with newly copied torrent {directory_path.name}.torrent metainfo: {e}")
+                return None, None
     else:
         piece_size = calculate_piece_size(directory)
         max_piece_size_bytes = piece_size * 1024 * 1024
