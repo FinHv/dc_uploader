@@ -1,7 +1,7 @@
 import argparse
 import os
 import re
-from datetime import datetime, UTC
+from datetime import datetime, timezone
 from pathlib import Path
 
 import requests
@@ -101,7 +101,7 @@ def fetch_game_info(game_name, releasedir):
             # Convert the release date from Unix time to a readable format
             release_date_unix = game.get('first_release_date', '')
             release_date = (
-                datetime.fromtimestamp(release_date_unix, UTC)
+                datetime.fromtimestamp(release_date_unix, timezone.utc)
                 .strftime('%d %B %Y')
                 if release_date_unix
                 else 'Unknown'
