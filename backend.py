@@ -67,7 +67,7 @@ class CustomOutput(io.TextIOBase):
     def log_to_db(self, message):
         """Insert the log message into the SQLite database."""
         # Strip all ANSI color codes from the message
-        ansi_escape = re.compile(r'\\033\[[0-9;]*m')
+        message = re.sub(r'\033\[[0-9;]*m', '', message)
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
 

@@ -210,7 +210,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
                     return None, None
             except Exception as e:
                 log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
-                print(f"{bcolors.FAIL}Error generating torrent: {e}")
+                print(f"{bcolors.FAIL}Error generating torrent: {e}{bcolors.ENDC}")
                 return None, None
 
         elif hasher == 'mkbrr':
@@ -218,7 +218,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
                 mkbrr_path = get_mkbrr_bin()
             except Exception as e:
                 log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
-                print(f"{bcolors.FAIL}Error getting mkbrr binary: {e}")
+                print(f"{bcolors.FAIL}Error getting mkbrr binary: {e}{bcolors.ENDC}")
                 return None, None
 
             # Ensure mkbrr is executable for both owner and group
@@ -239,7 +239,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
                    '-t', f'{announceurl}',
                    '-e',
                    '-l', str(power),
-                   '-o', get_root_dir() + f'{output_torrent}',
+                   '-o', get_root_dir() + f'/{output_torrent}',
                    '-s', f'{esource}',
                    '-c', f'{ecomment}']
 
@@ -303,7 +303,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
                     raise FileNotFoundError(f"Expected torrent file {output_torrent} was not created")
             except Exception as e:
                 log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
-                print(f"{bcolors.FAIL}Error creating torrent: {e}")
+                print(f"{bcolors.FAIL}Error creating torrent: {e}{bcolors.ENDC}")
 
                 # Ensure process is termianted to prevent orphaned mkbrr processes
                 process.terminate()
@@ -316,7 +316,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
                     raise ValueError("Generated torrent is missing pieces")
             except Exception as e:
                 log_to_file(temp_dir_path / 'create_torrent_error.log', str(e))
-                print(f"{bcolors.FAIL}Error creating torrent: {e}")
+                print(f"{bcolors.FAIL}Error creating torrent: {e}{bcolors.ENDC}")
                 return None, None
 
     print(f"{bcolors.OKGREEN}Torrent to be uploaded has been created: {output_torrent}\n{bcolors.ENDC}")
