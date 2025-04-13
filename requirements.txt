@@ -7,3 +7,4 @@ gevent
 cli-ui
 rich
 psutil
+guessit

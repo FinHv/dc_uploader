@@ -78,7 +78,6 @@ if [ $# -ne 0 ]; then
     done
 fi
 
-
 if [ "$EUID" -ne 0 ]; then
     echo -e "${red}Please run as root or with sudo.${ncl}" >&2
     exit 1
@@ -121,11 +120,12 @@ if [ "$server_name" != "$HOSTNAME" ]; then
     fi
 fi
 
-wget https://mediaarea.net/repo/deb/repo-mediaarea_1.0-25_all.deb
-dpkg -i repo-mediaarea_1.0-25_all.deb
-rm repo-mediaarea_1.0-25_all.deb
-apt update
-
+if ! command_exists mediainfo; then
+    # If mediainfo isn't already installed, add the repo
+    wget https://mediaarea.net/repo/deb/repo-mediaarea_1.0-25_all.deb
+    dpkg -i repo-mediaarea_1.0-25_all.deb
+    rm repo-mediaarea_1.0-25_all.deb
+fi
 # If mtn isn't already installed, add it.
 if ! command_exists mtn; then
     if [ "$ID" == "ubuntu" ]; then
@@ -147,8 +147,9 @@ if ! command_exists mtn; then
             exit 1
         fi
     fi
-    apt-get update
 fi
+
+apt-get update
 
 # Required packages
 echo "Installing required tools and their dependencies..."
@@ -223,7 +224,7 @@ fi
 # SSL setup
 # Generate a self-signed certificate
 echo "Generating self-signed certificate..."
-mkdir certificates
+mkdir -p certificates
 openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout certificates/key.pem \
 -out certificates/cert.pem -days 3650 -nodes -subj "/CN=$server_name"
 

@@ -46,7 +46,7 @@ A simple python tool built for ubuntu to create and upload torrents. Debian is u
 
 ### config.ini settings
 
-Do not change the headers or location of the settings. If it is not mentioned below, just leave it its default.
+Do not change the headers or location of the settings, or change the location of config.ini. It MUST remain in the program's root directory, otherwise - bugs. If it is not mentioned below, just leave it its default.
 
 - user: If you are exposing the web app to the wider Internet, you should choose a more secure username.
 - password: If you are exposing the web app to the wider Internet, you absolutely must choose a more secure password.

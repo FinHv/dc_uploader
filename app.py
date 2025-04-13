@@ -459,15 +459,13 @@ def set_uploaded():
     dir_path = os.path.join(data_dir, directory_name)
 
     # Remove any existing status folders
-    for status in ['uploading', 'uploaded', 'dupe']:
+    for status in ['uploading', 'uploaded', 'dupe', 'failed', 'processing']:
         remove_status_file(dir_path, status)
 
     # Create .uploaded status folder
     create_status_file(dir_path, 'uploaded')
 
     return redirect(url_for('home'))
-
-
 
 # Helper functions to remove and create status files
 def remove_status_file(dir_path, status):

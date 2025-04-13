@@ -28,6 +28,10 @@ PREPENDNAME = config.get('Settings', 'PREPENDNAME')
 os.makedirs(TMP_DIR, exist_ok=True)
 torf_start_time = time.time()
 
+def get_root_dir():
+    """Use config.ini to get the root directory."""
+    return os.path.dirname(os.path.abspath('config.ini'))
+
 def torf_cb(torrent, filepath, pieces_done, pieces_total):
     global torf_start_time
 
@@ -81,7 +85,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
 
     directory_path = Path(directory)
     temp_dir_path = Path(temp_dir)
-    output_torrent = f"{shlex.quote(str(temp_dir_path / f"{directory_path.name}.torrent"))}"
+    output_torrent = str(temp_dir_path) + f"/{directory_path.name}.torrent"
 
     # Proceed only if SOURCEFOLDER is set
     if etorrentpath:
@@ -91,11 +95,12 @@ def create_torrent(directory, temp_dir, edit, hasher):
         etorrent_file_path = None
 
     if edit and etorrent_file_path:
-        # Existing torrent successfully found, and torrent reuse is desired
-        #if not etorrent_file_path.exists():
-        #    print("No existing .torrent found. New torrent will be generated.")
+        if not etorrent_file_path.exists():
+            print("No existing .torrent found. New torrent will be generated.")
             # Call itself, but set edit to false
-        #    create_torrent(directory, temp_dir, False, hasher)
+            create_torrent(directory, temp_dir, False, hasher)
+
+        # Existing torrent *file* successfully found, try to use it
         try:
             reused_torrent = Torrent.read(f"{shlex.quote(str(etorrent_file_path))}")
         except (ReadError, BdecodeError, MetainfoError):
@@ -217,7 +222,7 @@ def create_torrent(directory, temp_dir, edit, hasher):
                    '-t', f'{announceurl}',
                    '-e',
                    '-l', str(power),
-                   '-o', f'{output_torrent}',
+                   '-o', get_root_dir() + f'{output_torrent}',
                    '-s', f'{esource}',
                    '-c', f'{ecomment}']
 

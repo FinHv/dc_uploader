@@ -18,8 +18,7 @@ from utils.database_utils import insert_upload, update_upload_status
 from utils.dupe_utils import check_and_download_dupe
 from utils.gameinfo_utils import fetch_game_info, extract_game_name
 from utils.image_utils import upload_images
-from utils.imdb_utils import get_imdb_info, extract_imdb_link_from_nfo, extract_movie_details, extract_tv_show_details, \
-    get_imdb_tv_info
+from utils.imdb_utils import extract_imdb_link_from_nfo, get_imdb_info
 from utils.logging_utils import log_to_file, log_upload_details
 from utils.login_utils import login
 from utils.mediainfo_utils import generate_mediainfo
@@ -67,6 +66,8 @@ class CustomOutput(io.TextIOBase):
 
     def log_to_db(self, message):
         """Insert the log message into the SQLite database."""
+        # Strip all ANSI color codes from the message
+        ansi_escape = re.compile(r'\\033\[[0-9;]*m')
         conn = sqlite3.connect(self.db_path)
         c = conn.cursor()
 
@@ -151,18 +152,22 @@ def main():
 
     # Load configuration
     config = ConfigLoader().get_config()
-    TMP_DIR = Path(config.get('Paths', 'TMP_DIR')) / str(os.getpid())
-    TEMPLATE_PATH = Path(config.get('Paths', 'TEMPLATE_PATH'))
-    upload_log_path = Path(config.get('Paths', 'UPLOADLOG'))
+    # We know utils will always be in config.ini. If a user moves it, it's on them for any bugs
+
+    # Join tmp and running process's PID to generate a unique directory
+    tmp_dir = Path(config.get('Paths', 'TMP_DIR')) / str(os.getpid())
     cleanup_enabled = config.getboolean('Settings', 'CLEANUP')
-    hasher = config.get('Torrent', 'HASHER').strip()
+
     program_version = "1.1.0"
 
     try:
-        # Ensure TMP_DIR exists
-        TMP_DIR.mkdir(parents=True, exist_ok=True)
+        hasher = config.get('Torrent', 'HASHER').strip()
+        template_path = Path(config.get('Paths', 'TEMPLATE_PATH'))
+        upload_log_path = Path(config.get('Paths', 'UPLOADLOG'))
+        # Ensure tmp_dir exists
+        tmp_dir.mkdir(parents=True, exist_ok=True)
 
-        log_file_path = TMP_DIR / 'main.log'
+        log_file_path = tmp_dir / 'main.log'
 
         # Ensure upload.log is created
         try:
@@ -170,14 +175,14 @@ def main():
             #print(f"Upload log created at: {upload_log_path}")
         except Exception as e:
             print(f"Error creating upload log: {str(e)}")
-            fail_exit(TMP_DIR, cleanup_enabled)
+            fail_exit(tmp_dir, cleanup_enabled)
 
         if len(sys.argv) > 1:
             directory_name = sys.argv[1]
             update_upload_status(name=directory_name, new_status='processing')
         else:
             log("No directory name provided.", log_file_path)
-            fail_exit(TMP_DIR, cleanup_enabled)
+            fail_exit(tmp_dir, cleanup_enabled)
 
         ascii_art_header("Header", program_version)
         version_check(program_version)
@@ -191,12 +196,12 @@ def main():
         if not directory.exists():
             log(f"The provided directory does not exist: {directory}", log_file_path)
             print(f"{bcolors.ENDC}{bcolors.FAIL}Directory does not exist: {directory}\n{bcolors.ENDC}")
-            fail_exit(TMP_DIR, cleanup_enabled)
+            fail_exit(tmp_dir, cleanup_enabled)
 
         if hasher != 'torf' and hasher != 'mkbrr':
             log(f"Unknown hasher: {hasher}", log_file_path)
             print(f"{bcolors.ENDC}{bcolors.FAIL}Unknown hasher: {hasher}\n{bcolors.ENDC}")
-            fail_exit(TMP_DIR, cleanup_enabled)
+            fail_exit(tmp_dir, cleanup_enabled)
 
         update_status(directory, 'uploading')
 
@@ -254,7 +259,7 @@ def main():
             if not cookies:
                 log_to_file(log_file_path, "Login failed. Cannot proceed with the script.")
                 print(f"{bcolors.RED}Login failed. Cannot proceed with the script.\n{bcolors.ENDC}")
-                fail_exit(TMP_DIR, cleanup_enabled)
+                fail_exit(tmp_dir, cleanup_enabled)
             else:
                 print(f"{bcolors.OKGREEN}Login successful. Proceeding...\n{bcolors.ENDC}")
                 # Continue with the rest of your script using the cookies
@@ -263,12 +268,12 @@ def main():
         except Exception as e:
             log_to_file(log_file_path, f"Error during login: {str(e)}")
             print(f"{bcolors.FAIL}Error during login: {str(e)}\n{bcolors.ENDC}")
-            fail_exit(TMP_DIR, cleanup_enabled)
+            fail_exit(tmp_dir, cleanup_enabled)
 
         insert_upload(name=directory_name)
 
-        # Create process-specific directory in TMP_DIR
-        temp_dir = TMP_DIR
+        # Create process-specific directory in tmp_dir
+        temp_dir = tmp_dir
 
         # Initialize duplicate check variable
         duplicate_found = False
@@ -288,14 +293,14 @@ def main():
                     update_status(directory, 'dupe')
                     update_upload_status(name=directory_name, new_status='dupe')
                     log_upload_details(upload_details, upload_log_path, duplicate_found=True)
-                    cleanup_tmp_dir(TMP_DIR, cleanup_enabled)  # Clean up TMP_DIR
+                    cleanup_tmp_dir(tmp_dir, cleanup_enabled)  # Clean up tmp_dir
                     exit(1)
             else:
                 log("Dupe check or download is disabled in the config.", log_file_path)
 
         except Exception as e:
             log(f"Error checking for duplicates: {str(e)}", log_file_path)
-            cleanup_tmp_dir(TMP_DIR, cleanup_enabled)  # Clean up TMP_DIR
+            cleanup_tmp_dir(tmp_dir, cleanup_enabled)  # Clean up tmp_dir
             exit(1)
 
         ascii_art_header("Category")
@@ -317,7 +322,7 @@ def main():
                     generate_screenshots(directory, category_id)
                 except Exception as e:
                     log(f"Error generating screenshots: {str(e)}", log_file_path)
-                    fail_exit(TMP_DIR, cleanup_enabled)
+                    fail_exit(tmp_dir, cleanup_enabled)
             else:
                 log(f"Category ID {category_id} is not in the screenshot categories: {screenshot_categories}", log_file_path)
         else:
@@ -342,49 +347,43 @@ def main():
         imdb_link = ''
         if imdb_enabled:
             ascii_art_header("IMDB")
-            print(f"{bcolors.YELLOW}Find IMDB data\n{bcolors.ENDC}")
+
+            print(f"{bcolors.YELLOW}Searching for IMDB data\n{bcolors.ENDC}")
+
             if category_id in imdb_movie_categories or category_id in imdb_tv_categories:
                 # Attempt to extract IMDb link from .nfo file
                 imdb_link = extract_imdb_link_from_nfo(directory)
+
                 if imdb_link:
                     print(f"{bcolors.OKGREEN}IMDb link found in NFO: {imdb_link}\n{bcolors.ENDC}")
+
                     update_upload_status(name=directory_name, imdb_url=imdb_link)  # Update IMDb URL in DB
-                else:
+                elif category_id in imdb_movie_categories or category_id in imdb_tv_categories:
                     if category_id in imdb_movie_categories:
-                        print(f"{bcolors.YELLOW}No IMDb link found in NFO or no NFO file present. Attempting to extract movie details from title.\n{bcolors.ENDC}")
-                        title, year = extract_movie_details(directory_name)
-                        if title:
-                            imdb_info = get_imdb_info(title, year)
-                            if imdb_info:
-                                imdb_link = f"https://www.imdb.com/title/{imdb_info['id']}/"
-                                print(f"{bcolors.OKGREEN}IMDb link found: {imdb_link}\n{bcolors.ENDC}")
-                                update_upload_status(name=directory_name, imdb_url=imdb_link)  # Update IMDb URL in DB
-                            else:
-                                print(f"{bcolors.FAIL}No IMDb info found.{bcolors.ENDC}")
-                        else:
-                            print(f"{bcolors.FAIL}Could not extract movie details from directory name.{bcolors.ENDC}")
-                    elif category_id in imdb_tv_categories:
-                        print(f"{bcolors.YELLOW}No IMDb link found in NFO or no NFO file present. Attempting to extract TV show details from title.\n{bcolors.ENDC}")
-                        title, season, episode = extract_tv_show_details(directory_name)
-                        if title:
-                            imdb_info = get_imdb_tv_info(title, season, episode)
-                            if imdb_info:
-                                imdb_link = f"https://www.imdb.com/title/{imdb_info['id']}/"
-                                print(f"{bcolors.OKGREEN}IMDb link found: {imdb_link}\n{bcolors.ENDC}")
-                                update_upload_status(name=directory_name, imdb_url=imdb_link)  # Update IMDb URL in DB
-                            else:
-                                print(f"{bcolors.FAIL}No IMDb info found.{bcolors.ENDC}")
-                        else:
-                            print(f"{bcolors.FAIL}Could not extract TV show details from directory name.{bcolors.ENDC}")
+                        media_type = 'movie'
+                    else:
+                        media_type = 'tv'
+                    print(f"{bcolors.YELLOW}No IMDb link found in NFO or no NFO file present. "
+                          f"Attempting to extract details from directory name.\n{bcolors.ENDC}")
+                    # If found, will contain a dict with 'id', 'title', and 'year'
+                    imdb_info = get_imdb_info(directory_name, media_type)
+                    if imdb_info:
+                        imdb_link = f"https://www.imdb.com/title/{imdb_info['id']}/"
+
+                        print(f"{bcolors.OKGREEN}IMDb link found: {imdb_link}\n{bcolors.ENDC}")
+                        update_upload_status(name=directory_name, imdb_url=imdb_link)  # Update IMDb URL in DB
             else:
-                print(f"{bcolors.YELLOW}Category ID {category_id} is not in the IMDb categories: {imdb_movie_categories} or {imdb_tv_categories}{bcolors.ENDC}")
+                print(f"{bcolors.YELLOW}Category ID {category_id} is not in the IMDb categories: "
+                      f"{imdb_movie_categories} or {imdb_tv_categories}{bcolors.ENDC}")
 
         imdb_id = re.search(r'tt\d+', imdb_link).group() if imdb_link else ''
 
         # Game information processing
         if gameinfo_enabled and category_id in game_categories:
             ascii_art_header("Gameinfo")
+
             print(f"{bcolors.YELLOW}Fetching game information...\n{bcolors.ENDC}")
+
             try:
                 # Use the correct function for extracting the game name from the release name or directory
                 game_name = extract_game_name(directory_name)  # Ensure this function exists and works
@@ -452,7 +451,7 @@ def main():
         except Exception as e:
             log(f"Error creating torrent: {str(e)}", log_file_path)
             update_upload_status(name=directory_name, new_status='failed')
-            fail_exit(TMP_DIR, cleanup_enabled)
+            fail_exit(tmp_dir, cleanup_enabled)
 
         # Image upload processing
         ascii_art_header("UploadImages")
@@ -474,7 +473,7 @@ def main():
                 # Upload the screenshots and get URLs
                 if screenshots_enabled:
                     print(f"{bcolors.YELLOW}Uploading screenshots...\n{bcolors.ENDC}")
-                    screenshots_dir = TMP_DIR / 'screens'
+                    screenshots_dir = tmp_dir / 'screens'
                     if screenshots_dir.exists():
                         screenshot_urls = upload_images(screenshots_dir, is_screenshots=True)
 
@@ -491,7 +490,7 @@ def main():
                         print(f"{bcolors.RED}Screenshots directory not found or it is empty.\n{bcolors.ENDC}")
 
                 # Upload the game images if game info is available and game images exist
-                game_image_dir = TMP_DIR / 'images'
+                game_image_dir = tmp_dir / 'images'
                 if game_image_dir.exists() and any(game_image_dir.iterdir()):
                     print(f"{bcolors.YELLOW}Uploading game images...\n{bcolors.ENDC}")
 
@@ -537,8 +536,8 @@ def main():
 
        # Prepare and save the final template with all content
         try:
-            output_template_path = os.path.join(TMP_DIR, 'output_template.txt')
-            prepare_template(str(TEMPLATE_PATH), output_template_path, replacements)
+            output_template_path = os.path.join(tmp_dir, 'output_template.txt')
+            prepare_template(str(template_path), output_template_path, replacements)
 
             # Read the template content after replacements
             with open(output_template_path, 'r', encoding='utf-8') as file:
@@ -594,13 +593,13 @@ def main():
             # Optionally, you can log details even when an exception occurs, if relevant
             #log_upload_details(upload_details, upload_log_path, duplicate_found=False)
             print(f"Failed to upload torrent. Error: {str(e)}")
-            fail_exit(TMP_DIR, cleanup_enabled)
+            fail_exit(tmp_dir, cleanup_enabled)
     except KeyboardInterrupt:
         # Cleanup on keyboard interrupt
         print(f"\nKeyboard interrupt detected. Cleaning up and exiting...")
-        fail_exit(TMP_DIR, cleanup_enabled)
+        fail_exit(tmp_dir, cleanup_enabled)
     finally:
-        cleanup_tmp_dir(TMP_DIR, cleanup_enabled)
+        cleanup_tmp_dir(tmp_dir, cleanup_enabled)
 
 if __name__ == "__main__":
     main()
