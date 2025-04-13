@@ -35,17 +35,7 @@ def extract_media_details(directory_name, media_type):
     else:
         results = guessit(directory_name, options={"type": "movie"})
 
-    title = results.get('title')
-    alt_title = results.get('alternative_title')
-    year = results.get('year')
-    season = results.get('season')
-    episode = results.get('episode')
-
-    if alt_title:
-        # If there's an alt title, add it so it can be searched as well
-        title = title + alt_title
-
-    return title, year, season, episode
+    return results
 
 def fetch_imdb_id(tmdb_id, api_key, media_type):
     """Get the IMDb ID for a given movie or TV show ID from TMDb.
@@ -79,12 +69,23 @@ def get_imdb_info(directory_name, media_type):
         media_type (str): The type of media (movie or tv)
         """
 
-    title, year, season, episode = extract_media_details(directory_name, media_type)
+    extracted_info = extract_media_details(directory_name, media_type)
+    title = extracted_info.get('title')
+    alt_title = extracted_info.get('alternative_title')
+    year = extracted_info.get('year')
+    season = extracted_info.get('season')
+    episode = extracted_info.get('episode')
+
     
     if not title:
         # Can't continue. Just return none
         print(f"{bcolors.FAIL}Could not extract movie title from directory name.{bcolors.ENDC}")
         return None
+    elif alt_title:
+        # Title exists, but alt title is also present
+        # Append alt title to title with a space so it can be searched with title
+        title += f' {alt_title}'
+
     # Set to 'empty string' if not provided, title is the only one we MUST have
     if not year:
         year = ''
