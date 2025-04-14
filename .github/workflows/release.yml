@@ -4,7 +4,6 @@ on:
   release:
     types:
       - published
-      -
 # Defines two custom environment variables for the workflow. These are used for the Container registry domain,
 # and a name for the Docker image that this workflow builds.
 env:
@@ -14,6 +13,10 @@ env:
 jobs:
   create-and-attach-tarball:
     runs-on: ubuntu-latest
+
+    # Sets the permissions granted to the `GITHUB_TOKEN` for the actions in this job.
+    permissions:
+      contents: read
 
     steps:
     - name: Checkout code
