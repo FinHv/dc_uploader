@@ -39,7 +39,8 @@ RUN make lib && make install-lib
 
 WORKDIR ../
 
-RUN autoreconf -f -i && ./configure && make && make install && sed -i 's/#user_allow_other/user_allow_other/g' /etc/fuse.conf
+RUN autoreconf -f -i && ./configure && make && make install &&  \
+    sed -i 's/#user_allow_other/user_allow_other/g' /etc/fuse.conf
 
 WORKDIR ../
 
@@ -57,4 +58,8 @@ RUN /venv/dc_uploader/bin/pip3 install --upgrade -r requirements.txt
 
 COPY . .
 
-ENTRYPOINT ["top", "-b"]
+RUN find bin/mkbrr -type f -name "mkbrr" -exec chmod +x {} \; chmod +x scripts/*.sh; chmod +x utils/*.sh
+RUN chmod 777
+
+
+ENTRYPOINT bash /dc_uploader/utils/config_validator.sh upload.sh
