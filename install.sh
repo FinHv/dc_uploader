@@ -198,8 +198,8 @@ python3 -m venv venv
 
 # Install Python packages
 echo "Installing Python packages in virtual environment..."
-"venv/bin/pip3" install --upgrade pip
-"venv/bin/pip3" install --upgrade -r requirements.txt
+"/venv/bin/pip3" install --upgrade pip
+"/venv/bin/pip3" install --upgrade -r requirements.txt
 
 # Ensure scripts are executable
 chmod +x start.sh
@@ -214,7 +214,7 @@ echo "Initiating polar bear attack (do you guys actually read these messages?)"
 echo "Initializing databases..."
 # Does not need virtual environment since it is touching stuff outside of virtual environment
 
-if "venv/bin/python3" utils/database_utils.py initialize_all_databases; then
+if "/venv/bin/python3" utils/database_utils.py initialize_all_databases; then
     echo "Databases created successfully."
 else
     echo -e "${red}Error: Couldn't initialize databases${ncl}" >&2

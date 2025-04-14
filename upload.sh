@@ -183,7 +183,7 @@ if ! [ -d "$data_dir/$uploaded_directory" ]; then
 fi
 
 # Run using venv
-source "venv/bin/activate"
+source "/venv/bin/activate"
 
 if python3 backend.py "$uploaded_directory"; then
     exit 0;

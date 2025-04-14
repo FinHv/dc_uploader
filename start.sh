@@ -28,7 +28,7 @@ if utils/config_validator.sh "start.sh"; then
         echo -e "${ylw}Warning: Screen session named dc-uploader already exists. Please kill it before starting a" \
         "new one.${ncl}" >&2
     else
-        screen -dm -L -Logfile "$log_file" -S  dc-uploader "venv/bin/python3" app.py
+        screen -dm -L -Logfile "$log_file" -S  dc-uploader "/venv/bin/python3" app.py
         # Check if the screen session was created successfully
         if screen -list | grep -q "dc-uploader"; then
             echo "Web app started successfully in detached screen session named dc-uploader."
