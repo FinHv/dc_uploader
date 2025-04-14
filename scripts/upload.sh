@@ -1,7 +1,7 @@
 #!/bin/bash
 
 print_help() {
-    echo "Script usage: $script_name \"folder/to/be/uploaded\" [OPTION]"
+    echo "Script usage: $script \"folder/to/be/uploaded\" [OPTION]"
     echo "Directory name or full absolute directory path should be in double quotes, as shown above, to avoid" \
     "unexpected behavior."
     echo
@@ -16,12 +16,16 @@ print_help() {
     echo "    -h, --help: Show this help page."
 }
 
-script_data_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
+script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+script_dir="${script_path%/*}"
+script="${script_path##*/}"
+root_dir="$script_dir/.."
 
-cd "$script_data_path" || exit
+# Use script path to get the parent directory - AKA dc_uploader
+cd "$root_dir" || exit 1
 
 # # Only continue if config validator returns on fatal errors
-if ! utils/config_validator.sh "upload.sh"; then
+if ! "$root_dir/utils/config_validator.sh" "upload.sh"; then
     exit 1
 fi
 
@@ -30,15 +34,13 @@ red='\033[0;31m'
 ylw='\033[1;33m'
 ncl='\033[0m'
 
-data_dir="$(awk -F '=' '/^DATADIR[[:space:]]*=/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}' config.ini)"
+data_dir="$(awk -F '=' '/^DATADIR[[:space:]]*=/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}' "$root_dir/config.ini")"
 # In case user put in a trailing forward slash to DATADIR
 data_dir=$(realpath -s "$data_dir")
-watch_dir="$(awk -F '=' '/^WATCHFOLDER[[:space:]]*=/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}' config.ini)"
+watch_dir="$(awk -F '=' '/^WATCHFOLDER[[:space:]]*=/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}' "$root_dir/config.ini")"
 # In case user put in a trailing forward slash to DATADIR
 watch_dir=$(realpath -s "$watch_dir")
 data_path="$1"
-full_script_path="$(readlink -f "${BASH_SOURCE[0]}")"
-script_name="${full_script_path##*/}"
 
 # Initial argument check
 if [ $# -eq 0 ] || [[ "$data_path" == "--help" ]] || [[ "$data_path" == "-h" ]]; then
@@ -77,7 +79,7 @@ if [ $# -gt 1 ]; then
         exit 1
     fi
 
-    if ! opts=$(getopt -o 'hlcm' -l 'help,ln,cp,mv' -n "$script_name" -- "$@"); then
+    if ! opts=$(getopt -o 'hlcm' -l 'help,ln,cp,mv' -n "$script" -- "$@"); then
         echo -e "${red}ERROR: Failed to parse options. See --help.${ncl}" >&2
         exit 1
     fi
@@ -183,9 +185,9 @@ if ! [ -d "$data_dir/$uploaded_directory" ]; then
 fi
 
 # Run using venv
-source "/venv/bin/activate"
+source "/venv/dc_uploader/bin/activate"
 
-if python3 backend.py "$uploaded_directory"; then
+if python3 "$root_dir/backend.py" "$uploaded_directory"; then
     exit 0;
 else
     exit 1;

@@ -2,16 +2,19 @@
 
 set -e
 
-script_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
+script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+script_dir="${script_path%/*}"
+script="${script_path##*/}"
+root_dir="$script_dir/.."
 
-cd "$script_path" || exit
+cd "$root_dir" || exit 1
 
-log_file="files/webapp.log"
+log_file="$root_dir/files/webapp.log"
 red='\033[0;31m'
 ncl='\033[0m' # No color
 ylw='\033[0;33m'
 
-if utils/config_validator.sh "start.sh"; then
+if "$root_dir/utils/config_validator.sh" "start.sh"; then
     # Only start if config validator returns on fatal errors
     echo "Starting web app with detached screen named \"dc-uploader\""
     if [ -f "$log_file" ]; then
@@ -28,7 +31,7 @@ if utils/config_validator.sh "start.sh"; then
         echo -e "${ylw}Warning: Screen session named dc-uploader already exists. Please kill it before starting a" \
         "new one.${ncl}" >&2
     else
-        screen -dm -L -Logfile "$log_file" -S  dc-uploader "/venv/bin/python3" app.py
+        screen -dm -L -Logfile "$log_file" -S dc-uploader "/venv/dc_uploader/bin/python3" app.py
         # Check if the screen session was created successfully
         if screen -list | grep -q "dc-uploader"; then
             echo "Web app started successfully in detached screen session named dc-uploader."

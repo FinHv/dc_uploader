@@ -1,7 +1,7 @@
 #!/bin/bash
 
 print_help() {
-    echo "Script usage: $script_name [OPTION]"
+    echo "Script usage: $script [OPTION]"
     echo
     echo "Optional arguments:"
     echo "    -d, --domain: Fully qualified domain name (e.g. hostname.domain.tld) you wish to use for the web app."
@@ -21,8 +21,13 @@ ncl='\033[0m'
 
 # Set default values if not provided
 HOSTNAME="$(hostname -f)"
-full_script_path="$(readlink -f "${BASH_SOURCE[0]}")"
-script_name="${full_script_path##*/}"
+
+script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+root_dir="${script_path%/*}"
+script="${script_path##*/}"
+script_dir="$root_dir/scripts"
+
+cd "$root_dir" || exit 1
 
 if [ $# -ne 0 ]; then
     if [ $# -gt 1 ]; then
@@ -46,7 +51,7 @@ if [ $# -ne 0 ]; then
         exit 1
     fi
 
-    if ! opts=$(getopt -o 'hd:' -l 'help,domain:' -n "$script_name" -- "$@"); then
+    if ! opts=$(getopt -o 'hd:' -l 'help,domain:' -n "$script" -- "$@"); then
         echo -e "${red}ERROR: Failed to parse options. See --help.${ncl}" >&2
         exit 1
     fi
@@ -100,15 +105,10 @@ if [ "$ID" != "ubuntu" ] && [ "$ID" != "debian" ]; then
     exit 1
 fi
 
-# Move to install.sh root directory
-script_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" ; pwd -P )
-
-cd "$script_path"
-
 if [ -z "$server_name" ]; then
     # Initiate server name to hostname in case user selects N. Needed for handle_reply.
-    read -p "Enter the fully qualified domain name for the self-signed certificate." \
-    "Leave blank for default [default: $HOSTNAME] : " -r
+    read -p \
+    "Enter the fully qualified domain name for the self-signed certificate. Leave blank for default [default: $HOSTNAME] : " -r
     server_name=${REPLY:-"$HOSTNAME"}
 fi
 
@@ -170,7 +170,7 @@ if [[ ! -f /usr/local/bin/rar2fs ]]; then
     cd rar2fs-$rar2fs_ver
 
     # Download unrar inside rar2fs directory
-    wget http://www.rarlab.com/rar/unrarsrc-$unrar_ver.tar.gz
+    wget https://www.rarlab.com/rar/unrarsrc-$unrar_ver.tar.gz
     tar zxvf unrarsrc-$unrar_ver.tar.gz
     cd unrar
 
@@ -189,24 +189,25 @@ if [[ ! -f /usr/local/bin/rar2fs ]]; then
     make install && echo "rar2fs installed successfully"
 
     sed -i 's/#user_allow_other/user_allow_other/g' /etc/fuse.conf
-    cd "$script_path"
+    cd "$root_dir" || exit 1
     rm -rf $workdir
 fi
 
 # Create venv
-python3 -m venv venv
+mkdir -p /venv
+python3 -m venv /venv/dc_uploader
 
 # Install Python packages
 echo "Installing Python packages in virtual environment..."
-"/venv/bin/pip3" install --upgrade pip
-"/venv/bin/pip3" install --upgrade -r requirements.txt
+"/venv/dc_uploader/bin/pip3" install --upgrade pip
+"/venv/dc_uploader/bin/pip3" install --upgrade -r "$root_dir/requirements.txt"
 
 # Ensure scripts are executable
-chmod +x start.sh
-chmod +x shutdown.sh
-chmod +x upload.sh
-chmod +x queue_upload.sh
-chmod +x utils/config_validator.sh
+chmod +x "$script_dir/start.sh"
+chmod +x "$script_dir/shutdown.sh"
+chmod +x "$script_dir/upload.sh"
+chmod +x "$script_dir/queue_upload.sh"
+chmod +x "$root_dir/utils/config_validator.sh"
 
 echo "Initiating polar bear attack (do you guys actually read these messages?)"
 
@@ -214,7 +215,7 @@ echo "Initiating polar bear attack (do you guys actually read these messages?)"
 echo "Initializing databases..."
 # Does not need virtual environment since it is touching stuff outside of virtual environment
 
-if "/venv/bin/python3" utils/database_utils.py initialize_all_databases; then
+if /venv/dc_uploader/bin/python3 "$root_dir/utils/database_utils.py" initialize_all_databases; then
     echo "Databases created successfully."
 else
     echo -e "${red}Error: Couldn't initialize databases${ncl}" >&2
@@ -224,9 +225,9 @@ fi
 # SSL setup
 # Generate a self-signed certificate
 echo "Generating self-signed certificate..."
-mkdir -p certificates
-openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout certificates/key.pem \
--out certificates/cert.pem -days 3650 -nodes -subj "/CN=$server_name"
+mkdir -p "$root_dir/certificates"
+openssl req -x509 -newkey ec -pkeyopt ec_paramgen_curve:secp384r1 -keyout "$root_dir/certificates/key.pem" \
+-out "$root_dir/certificates/cert.pem" -days 3650 -nodes -subj "/CN=$server_name"
 
 chown -R "$stored_user":"$stored_user" certificates
 
@@ -235,7 +236,7 @@ echo "Your Flask app will now run with HTTPS!"
 
 # Update the config.ini file with user, password, and port
 echo "Updating config.ini hostname..."
-sed -i "s/^hostname = .*/hostname = $server_name/" config.ini
+sed -i "s/^hostname = .*/hostname = $server_name/" "$root_dir/config.ini"
 
 echo "Setup complete. Start web server by executing start.sh, and make your first upload with upload.sh!"
 echo "Web app can be shutdown with shutdown.sh"

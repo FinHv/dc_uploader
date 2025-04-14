@@ -42,7 +42,7 @@ A simple python tool built for ubuntu to create and upload torrents. Debian is u
     - ANNOUNCEURL
     - WATCHFOLDER
     - DATADIR
-6. You're done.
+6. You're done. All user scripts are in the scripts directory.
 
 ### config.ini settings
 
@@ -170,7 +170,7 @@ The install.sh script must be run as root, since it has to install prerequisites
 
 ## Uninstall :(
 
-To remove just the program, simply delete the program folder. The python virtual environment is inside this folder, so don't worry about removing it manually
+To remove just the program, simply delete the program folder. The python virtual environment path is /venv/dc_uploader
 
 To remove the dependencies installed via apt, run apt remove. Double check if there are things that you don't want to uninstall, especially fuse3. Packages possibly installed by this script: 
 - build-essential mtn mediainfo fuse3 libfuse-dev screen software-properties-common autoconf gpg

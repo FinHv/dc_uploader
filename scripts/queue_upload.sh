@@ -1,9 +1,9 @@
 #!/bin/bash
 
 print_help() {
-    echo "Script usage: $script_name [QUEUE FILE] [OPTION]"
-    echo "Queue file can either be a full absolute path or a relative path relative to $script_name. e.g." \
-    "$script_name some_queue_file.txt [OPTION] if queue file is located in the same folder as $script_name"
+    echo "Script usage: $script [QUEUE FILE] [OPTION]"
+    echo "Queue file can either be a full absolute path or a relative path relative to $script. e.g." \
+    "$script some_queue_file.txt [OPTION] if queue file is located in the same folder as $script"
     echo
     echo "Required argument. Pick one:"
     echo "    -l, --ln: Hardlinks provided directory to DATADIR. If hardlink fails, fallback to symlink."
@@ -18,12 +18,15 @@ print_help() {
 
 set -e
 
-script_data_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
+script_path="$(readlink -f "${BASH_SOURCE[0]}")"
+script_dir="${script_path%/*}"
+script="${script_path##*/}"
+root_dir="$script_dir/.."
 
-cd "$script_data_path" || exit
+cd "$root_dir" || exit 1
 
 # # Only continue if config validator returns on fatal errors
-if ! utils/config_validator.sh; then
+if ! "$root_dir/utils/config_validator.sh" "upload.sh"; then
     exit 1
 fi
 
@@ -31,12 +34,10 @@ fi
 red='\033[0;31m'
 ncl='\033[0m'
 
-data_dir="$(awk -F '=' '/^DATADIR[[:space:]]*=/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}' config.ini)"
+data_dir="$(awk -F '=' '/^DATADIR[[:space:]]*=/ {gsub(/^[[:space:]]+|[[:space:]]+$/, "", $2); print $2}' "$root_dir/config.ini")"
 # In case user put in a trailing forward slash to DATADIR
 data_dir=$(realpath -s "$data_dir")
 queue_file="$1"
-full_script_path="$(readlink -f "${BASH_SOURCE[0]}")"
-script_name="${full_script_path##*/}"
 
 # Initial argument check
 if [ $# -eq 0 ] || [[ "$queue_file" == "--help" ]] || [[ "$queue_file" == "-h" ]]; then
@@ -72,7 +73,7 @@ fi
 # Store arg so it's not lost after getopt
 ARG="$2"
 
-if ! opts=$(getopt -o 'hlcm' -l 'help,ln,cp,mv' -n "$script_name" -- "$@"); then
+if ! opts=$(getopt -o 'hlcm' -l 'help,ln,cp,mv' -n "$script" -- "$@"); then
     echo -e "${red}ERROR: Failed to parse options. See --help.${ncl}" >&2
     exit 1
 fi
@@ -114,8 +115,8 @@ if ! [ -f "$queue_file" ]; then
     exit 1
 fi
 
-# Remove old log file
-log_file="files/queue_upload.log"
+# Rotate old log file if necessary
+log_file="$root_dir/files/queue_upload.log"
 
 if [ -f "$log_file" ]; then
         # Check if the log file size is 1MB or greater
@@ -129,8 +130,8 @@ fi
 
 while IFS= read -r line; do
     if ./upload.sh "$line" "$ARG"; then
-        echo "Successfully uploaded: $(basename "$line")" >> "$log_file"
+        echo "Successfully uploaded $line" >> "$log_file"
     else
-        echo "Error when uploading: $(basename "$line")" >> "$log_file"
+        echo "Error when uploading $line" >> "$log_file"
     fi
 done < "$queue_file"
