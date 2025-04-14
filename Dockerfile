@@ -52,7 +52,7 @@ WORKDIR /dc_uploader
 RUN mkdir -p /venv && python -m venv /venv/dc_uploader
 ENV PATH="/venv/dc_uploader/bin:$PATH"
 COPY requirements.txt .
-RUN /venv/dc_uploader/bin/pip3 install --upgrade pip
+RUN /venv/dc_uploader/bin/pip3 install --upgrade pip wheel
 RUN /venv/dc_uploader/bin/pip3 install --upgrade -r requirements.txt
 
 COPY . .

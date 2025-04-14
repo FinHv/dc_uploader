@@ -199,7 +199,7 @@ python3 -m venv /venv/dc_uploader
 
 # Install Python packages
 echo "Installing Python packages in virtual environment..."
-"/venv/dc_uploader/bin/pip3" install --upgrade pip
+"/venv/dc_uploader/bin/pip3" install --upgrade pip wheel
 "/venv/dc_uploader/bin/pip3" install --upgrade -r "$root_dir/requirements.txt"
 
 # Ensure scripts are executable
