@@ -53,6 +53,8 @@ check() {
     done
 }
 
+set -e
+
 # Pretty colors
 red='\033[0;31m'
 grn='\033[1;32m'

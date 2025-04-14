@@ -16,6 +16,8 @@ print_help() {
     echo "    -h, --help: Show this help page."
 }
 
+set -e
+
 script_data_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
 
 cd "$script_data_path" || exit

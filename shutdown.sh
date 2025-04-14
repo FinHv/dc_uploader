@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 if screen -list dc-uploader | grep -q "No Sockets found"; then
     echo "No web app sessions found, nothing to shutdown."
     exit 0

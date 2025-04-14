@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 script_path=$( cd "$(dirname "${BASH_SOURCE[0]}")" || exit ; pwd -P )
 
 cd "$script_path" || exit
