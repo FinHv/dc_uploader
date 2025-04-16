@@ -3,6 +3,10 @@
 # Created by https://www.toptal.com/developers/gitignore/api/linux,pycharm,python
 # Edit at https://www.toptal.com/developers/gitignore?templates=linux,pycharm,python
 
+# dc_uploader config.ini
+config.ini
+files/cookies.tmp
+
 ### Linux ###
 *~
 
