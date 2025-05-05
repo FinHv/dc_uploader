@@ -120,7 +120,8 @@ def create_torrent(directory, temp_dir, edit, hasher):
             reused_torrent.trackers = [announceurl]
             reused_torrent.comment = ecomment
             reused_torrent.created_by = creator
-
+            piece_size = reused_torrent.piece_size
+            
             info_dict = reused_torrent.metainfo['info']
             valid_keys = ['name', 'piece length', 'pieces', 'private', 'source']
 
