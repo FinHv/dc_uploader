@@ -4,7 +4,9 @@ ARG UNRAR_VERSION=7.1.6
 ARG RAR2FS_VERSION=1.29.7
 
 # Add mediaarea repo and install its package
-RUN wget https://mediaarea.net/repo/deb/repo-mediaarea_1.0-25_all.deb && \
+RUN apt-get update && \
+    apt-get clean && \
+    wget https://mediaarea.net/repo/deb/repo-mediaarea_1.0-25_all.deb && \
     dpkg -i repo-mediaarea_1.0-25_all.deb && \
     rm repo-mediaarea_1.0-25_all.deb && \
     echo 'deb https://download.opensuse.org/repositories/home:/movie_thumbnailer/Debian_12/ /' \
