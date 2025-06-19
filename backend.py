@@ -2,13 +2,12 @@ import io
 import os
 import platform
 import re
+import requests
 import shutil
 import sqlite3
 import sys
 import time
 from pathlib import Path
-
-import requests
 from requests import HTTPError
 
 from utils.art_utils import ascii_art_header
@@ -198,7 +197,7 @@ def main():
     tmp_dir = Path(config.get('Paths', 'TMP_DIR')) / str(os.getpid())
     cleanup_enabled = config.getboolean('Settings', 'CLEANUP')
 
-    program_version = "1.1.8"
+    program_version = "1.1.9"
 
     try:
         hasher = config.get('Torrent', 'HASHER').strip()
