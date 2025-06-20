@@ -15,7 +15,6 @@ RUN apt-get update && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
-    mtn \
     mediainfo \
     fuse3 \
     libfuse-dev \
