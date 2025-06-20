@@ -10,7 +10,7 @@ RUN apt-get update && \
     dpkg -i repo-mediaarea_1.0-25_all.deb && \
     rm repo-mediaarea_1.0-25_all.deb && \
     wget https://download.opensuse.org/repositories/home:/movie_thumbnailer/Debian_12/amd64/mtn_3.5.0-1_amd64.deb && \
-    apt install mtn_3.5.0-1_amd64.deb && \
+    apt install ./mtn_3.5.0-1_amd64.deb && \
     rm mtn_3.5.0-1_amd64.deb && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
