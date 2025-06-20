@@ -9,10 +9,9 @@ RUN apt-get update && \
     wget https://mediaarea.net/repo/deb/repo-mediaarea_1.0-25_all.deb && \
     dpkg -i repo-mediaarea_1.0-25_all.deb && \
     rm repo-mediaarea_1.0-25_all.deb && \
-    echo 'deb https://download.opensuse.org/repositories/home:/movie_thumbnailer/Debian_12/ /' \
-    | tee /etc/apt/sources.list.d/home:movie_thumbnailer.list && \
-    curl -fsSL https://download.opensuse.org/repositories/home:movie_thumbnailer/Debian_12/Release.key \
-    | gpg --dearmor | tee /etc/apt/trusted.gpg.d/home_movie_thumbnailer.gpg > /dev/null && \
+    wget https://download.opensuse.org/repositories/home:/movie_thumbnailer/Debian_12/amd64/mtn_3.5.0-1_amd64.deb && \
+    dpkg -i mtn_3.5.0-1_amd64.deb && \
+    rm mtn_3.5.0-1_amd64.deb && \
     apt-get update && \
     apt-get install -y --no-install-recommends \
     build-essential \
@@ -22,7 +21,6 @@ RUN apt-get update && \
     libfuse-dev \
     screen  \
     autoconf \
-    mtn \
     mediainfo && \
     apt-get clean
 
